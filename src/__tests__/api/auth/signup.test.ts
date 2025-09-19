@@ -28,7 +28,7 @@ describe('POST /api/auth/signup', () => {
 		vi.clearAllMocks()
 	})
 
-	const createMockRequest = (body: any): Request => {
+	const createMockRequest = (body: Record<string, unknown>): Request => {
 		return {
 			json: async () => body,
 		} as Request
@@ -374,7 +374,7 @@ describe('POST /api/auth/signup', () => {
 		})
 
 		it('should handle malformed JSON request', async () => {
-			//@ts-expect-error
+			//@ts-expect-error: Simulate malformed JSON request for testing error handling
 			const request = {
 				json: async () => {
 					throw new Error('Invalid JSON')
