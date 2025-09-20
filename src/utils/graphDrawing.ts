@@ -322,7 +322,6 @@ function drawNodes(
 	showLabels: boolean
 ) {
 	const nodeColors = {
-		PLANET: '#34d399',
 		STAR: '#fbbf24',
 		PLANET: '#3b82f6', // Blue for planets
 		ORBITAL_STATION: '#60a5fa', // Brighter blue for black background

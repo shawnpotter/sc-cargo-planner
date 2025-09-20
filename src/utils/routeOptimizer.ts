@@ -1,7 +1,7 @@
 // @/utils/routeOptimizer.ts
 import { Contract, RouteAlgorithm } from '@/constants/types'
 import { RouteGraph } from '@/utils/graph'
-import { locations } from '@/constants/locations'
+import { locations } from '@/data/locations'
 import { NearestNeighborStrategy } from '@/utils/routingStrategies/NearestNeighborStrategy'
 import { AStarStrategy } from '@/utils/routingStrategies/AStarStrategy'
 

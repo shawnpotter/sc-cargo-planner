@@ -2,7 +2,7 @@
 /**
  * Represents a location node in the route graph.
  */
-import { locations } from '../constants/locations'
+import { locations } from '@/data/locations'
 
 export interface LocationNode {
 	name: string
