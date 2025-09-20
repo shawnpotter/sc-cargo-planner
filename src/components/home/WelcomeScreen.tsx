@@ -11,6 +11,16 @@ interface WelcomeScreenProps {
 	readonly onContinue: (authenticated: boolean) => void
 }
 
+/**
+ * Renders the welcome screen for the Universal Cargo Management System (UCMS).
+ * Provides authentication options including sign in, sign up, and guest access.
+ * Displays system initialization status and handles authentication errors.
+ *
+ * @param {WelcomeScreenProps} props - The props for the WelcomeScreen component.
+ * @param {(isAuthenticated: boolean) => void} props.onContinue - Callback invoked when the user continues, indicating authentication status.
+ *
+ * @returns {JSX.Element} The rendered welcome screen UI.
+ */
 function WelcomeScreen({ onContinue }: WelcomeScreenProps) {
 	const [showSignIn, setShowSignIn] = useState(false)
 	const [showSignUp, setShowSignUp] = useState(false)

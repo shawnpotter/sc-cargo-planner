@@ -2,6 +2,61 @@
 import { IRoutingStrategy } from '@/utils/routingStrategies/IRoutingStrategy'
 import { RouteGraph } from '@/utils/graph'
 
+/**
+ * AStarStrategy implements an A* based routing strategy for constructing a route
+ * through a graph of nodes (e.g., waypoints, stations, planets).
+ *
+ * The strategy repeatedly plans a shortest path (A* search) from the current
+ * position to the next required destination. It respects planetary constraints
+ * by routing to a parent planet first when a destination requires a visit to
+ * that planet before visiting the destination node itself. As segments are
+ * discovered they are appended to a global route while avoiding duplicate
+ * consecutive nodes.
+ *
+ * Behavior summary:
+ * - Uses A* search (findPathToDestination) with a heuristic based on direct
+ *   distance provided by the graph.
+ * - Honors visitability constraints via graph.canVisit when expanding neighbors.
+ * - Ensures required planetary visits occur before visiting child nodes that
+ *   require them.
+ * - Appends segments to the constructed route while preventing duplicated
+ *   consecutive nodes.
+ *
+ * Public API:
+ * - findRoute(start, destinations, graph): Computes and returns an ordered list
+ *   of node identifiers representing the full route that visits all provided
+ *   destinations (and any required planetary waypoints) starting from `start`.
+ *
+ * Error handling:
+ * - If A* cannot find a path between the requested start and goal for any
+ *   segment, the underlying search throws an Error describing the failed
+ *   start/goal pair. The caller should handle or propagate this error.
+ *
+ * Implementation notes (internal helpers):
+ * - findPathToDestination(start, goal, graph, currentRoute): Performs the A*
+ *   search to produce a shortest path from start to goal. It tracks g-/f-
+ *   scores, reconstructs the discovered path, and respects graph-specific
+ *   visitation rules. This method throws when no path exists.
+ * - heuristic(from, to, graph): Supplies the admissible heuristic value for A*
+ *   based on direct distance between nodes as reported by the graph.
+ * - getLowestFScore(openSet, fScore): Returns the node in the open set with
+ *   the lowest f-score.
+ * - reconstructPath(cameFrom, current): Reconstructs a path from the cameFrom
+ *   map produced by the search.
+ *
+ * Threading / determinism:
+ * - The algorithm is deterministic with respect to the graph and input
+ *   destination ordering. It processes destinations in the order supplied by
+ *   the caller, subject to any inserted planetary visits required by node
+ *   constraints.
+ *
+ * @example
+ * Typical usage:
+ * const strategy = new AStarStrategy();
+ * const route = strategy.findRoute("startNode", ["destA", "destB"], graph);
+ *
+ * @public
+ */
 export class AStarStrategy implements IRoutingStrategy {
 	findRoute(
 		start: string,

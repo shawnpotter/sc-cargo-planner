@@ -7,6 +7,18 @@ interface PreviewProps {
 	readonly splitColumn: number
 }
 
+/**
+ * Renders a split preview view with two canvases side by side, representing the left and right columns.
+ * Displays the current splitter position as a percentage.
+ *
+ * @param leftCanvasRef - React ref for the left canvas element.
+ * @param rightCanvasRef - React ref for the right canvas element.
+ * @param splitColumn - The position of the splitter as a percentage (number).
+ *
+ * @remarks
+ * - Uses Tailwind CSS classes for styling.
+ * - Intended for OCR preview scenarios where a visual split is required.
+ */
 function Preview({ leftCanvasRef, rightCanvasRef, splitColumn }: PreviewProps) {
 	return (
 		<div className='flex flex-col gap-2'>

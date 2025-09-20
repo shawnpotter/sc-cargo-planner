@@ -9,6 +9,16 @@ interface HaulingModeToggleProps {
 	readonly className?: string
 }
 
+/**
+ * A toggle component for selecting the hauling mode in the cargo planner.
+ *
+ * Renders two buttons allowing the user to switch between "Contract Hauling" and "Commodity Hauling" modes.
+ * The currently selected mode is visually highlighted.
+ *
+ * @param currentMode - The currently selected hauling mode.
+ * @param onChange - Callback invoked with the new mode when a button is clicked.
+ * @param className - Optional CSS class for custom styling.
+ */
 function HaulingModeToggle({
 	currentMode,
 	onChange,

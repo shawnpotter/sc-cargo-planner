@@ -6,6 +6,19 @@ interface UploadImageProps {
 	disabled?: boolean
 }
 
+/**
+ * A React component that allows users to upload an image either by selecting a file
+ * or by pasting an image from the clipboard. The selected image is converted to a
+ * data URL and passed to the `onImageSelected` callback.
+ *
+ * @param onImageSelected - Callback function invoked with the image data URL when an image is selected or pasted.
+ * @param disabled - If true, disables the upload and paste functionality.
+ *
+ * @remarks
+ * - Supports PNG and JPG file uploads.
+ * - Supports clipboard paste (Ctrl+V) for images.
+ * - The file input is visually hidden; interaction is handled via the styled label.
+ */
 function UploadImage({ onImageSelected, disabled }: UploadImageProps) {
 	const handleFileUpload = useCallback(
 		async (e: React.ChangeEvent<HTMLInputElement>) => {

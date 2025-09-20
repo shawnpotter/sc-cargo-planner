@@ -1,10 +1,23 @@
 'use client'
-import { useState } from 'react'
+import React, { useState } from 'react'
 import { useSession } from 'next-auth/react'
 import { UserButton } from '@/components/auth/UserButton'
 import { ThemeSwitchButton } from '@/components/home/ThemeSwitchButton'
 import { UserSettingsModal } from '@/components/auth/UserSettingsModal'
 
+/**
+ * Renders the main header bar for the Universal Cargo Management System (U.C.M.S.) application.
+ *
+ * The header includes:
+ * - Application logo and title.
+ * - Current version and in-universe date (Star Citizen year).
+ * - Theme switch button.
+ * - User account button (with modal for editing user settings if authenticated).
+ *
+ * Handles user settings updates via an API call and displays a modal for editing account information.
+ *
+ * @returns {JSX.Element} The header bar component.
+ */
 export default function HeaderBar() {
 	const { data: session, status } = useSession()
 	const [isSettingsOpen, setIsSettingsOpen] = useState(false)

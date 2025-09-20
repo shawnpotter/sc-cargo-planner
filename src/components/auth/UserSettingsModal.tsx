@@ -14,6 +14,22 @@ interface UserSettingsModalProps {
 	}
 }
 
+/**
+ * Modal component for editing user account settings.
+ *
+ * Displays a form allowing the user to update their username and email address.
+ * Handles form state, validation, and submission. Shows loading and error states.
+ * Resets form fields when the modal is opened.
+ *
+ * @param {Object} props - Component props.
+ * @param {boolean} props.isOpen - Controls whether the modal is visible.
+ * @param {() => void} props.onClose - Callback to close the modal.
+ * @param {(user: { name: string; email: string }) => void} props.onSave - Callback to save updated user data.
+ * @param {{ name: string; email: string }} props.currentUser - The current user data to prefill the form.
+ *
+ * @returns {JSX.Element | null} The rendered modal component, or null if not open.
+ */
+
 function UserSettingsModal({
 	isOpen,
 	onClose,

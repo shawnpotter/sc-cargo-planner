@@ -11,13 +11,23 @@ interface GridPlaneProps {
 }
 
 /**
- * GridPlane component renders the cargo grids as a 3D plane with optional height lines.
- * @param {CargoGrid[]} grids - Array of cargo grids to be rendered.
- * @param {string} [borderColor='#FF8A00'] - Color for the border lines of the grid.
- * @param {string} [interiorColor='#444444'] - Color for the interior lines of the grid.
- * @param {string} [heightColor='#335577'] - Color for the height lines of the grid.
- * @param {boolean} [heightLines=true] - Flag to indicate if height lines should be rendered.
- * @param {number} [heightValue=1] - Default height value for the grid.
+ * Renders one or more 3D grid planes with optional height lines for visualization in a Three.js scene.
+ *
+ * Each grid is defined by its width, length, and optional height, position, and rotation.
+ * The grid displays border lines, interior lines, and optionally vertical height lines at the corners,
+ * as well as a top frame connecting the height lines.
+ *
+ * @param grids - Array of grid definitions, each specifying dimensions and transform.
+ * @param borderColor - Color for the border lines of the grid. Defaults to orange (`#FF8A00`).
+ * @param interiorColor - Color for the interior grid lines. Defaults to subtle gray (`#444444`).
+ * @param heightColor - Color for the height lines and top frame. Defaults to bluish (`#335577`).
+ * @param heightLines - Whether to render vertical height lines and top frame. Defaults to `true`.
+ * @param heightValue - Default height for grids if not specified in the grid object. Defaults to `1`.
+ *
+ * @remarks
+ * - Uses Three.js primitives via React Three Fiber.
+ * - Each grid is positioned and rotated according to its properties.
+ * - Height lines are semi-transparent for visual clarity.
  */
 function GridPlane({
 	grids,

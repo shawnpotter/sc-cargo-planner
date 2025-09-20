@@ -3,6 +3,25 @@ import { useCallback, useRef } from 'react'
 import { ImageProcessingSettings } from '@/components/ocr/parser/types'
 import { applyImageProcessing } from '@/components/ocr/utils/imageProcessing'
 
+/**
+ * Custom React hook for processing and splitting an image into left and right halves using HTML canvas.
+ *
+ * This hook provides references to two canvas elements and a function to process an image:
+ * - Scales the image according to the provided settings.
+ * - Splits the image at a specified column percentage.
+ * - Applies custom image processing to each half.
+ * - Returns the processed left and right halves as PNG data URLs.
+ *
+ * @returns An object containing:
+ * - `leftCanvasRef`: Ref to the left canvas element.
+ * - `rightCanvasRef`: Ref to the right canvas element.
+ * - `splitAndProcessImage`: Function to split and process the image.
+ *
+ * @example
+ * const { leftCanvasRef, rightCanvasRef, splitAndProcessImage } = useImageProcessor();
+ * const result = await splitAndProcessImage(imageSrc, settings);
+ * // result.left and result.right contain processed image data URLs.
+ */
 export function useImageProcessor() {
 	const leftCanvasRef = useRef<HTMLCanvasElement>(null)
 	const rightCanvasRef = useRef<HTMLCanvasElement>(null)

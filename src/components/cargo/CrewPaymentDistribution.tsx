@@ -16,7 +16,20 @@ interface CrewPaymentDistributionProps {
 	readonly haulingMode: HaulingMode
 }
 
-export default function CrewPaymentDistribution({
+/**
+ * Displays and manages the distribution of payment among crew members based on contract or manual payout.
+ *
+ * - Allows users to view, add, remove, and update crew members and their share percentages.
+ * - Calculates each crew member's payment based on their share and the total payout.
+ * - Supports two hauling modes: contract-based (aggregates payouts from contracts) and manual entry.
+ * - Warns if total share percentage does not equal 100%.
+ *
+ * @param contracts - Array of contract objects, each containing payout information.
+ * @param haulingMode - The current hauling mode, either contract-based or manual.
+ *
+ * @returns React component for crew payment distribution management.
+ */
+function CrewPaymentDistribution({
 	contracts,
 	haulingMode,
 }: CrewPaymentDistributionProps) {
@@ -227,3 +240,5 @@ export default function CrewPaymentDistribution({
 		</div>
 	)
 }
+
+export { CrewPaymentDistribution }

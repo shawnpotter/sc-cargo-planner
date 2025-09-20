@@ -12,6 +12,19 @@ interface ControlsProps {
 	readonly hasWorker: boolean
 }
 
+/**
+ * Renders the OCR image processing controls panel, allowing users to adjust image settings,
+ * select presets, and trigger OCR processing. Includes sliders for brightness, contrast, scale,
+ * and threshold, as well as toggles for grayscale, invert, sharpen, and threshold effects.
+ * Also provides action buttons for resetting settings and running OCR.
+ *
+ * @param settings - The current image processing settings.
+ * @param onSettingsChange - Callback invoked when any setting is changed.
+ * @param onReset - Callback invoked when the reset button is clicked.
+ * @param onRunOCR - Callback invoked when the Run OCR button is clicked.
+ * @param isProcessing - Indicates if OCR processing is currently running.
+ * @param hasWorker - Indicates if the OCR worker is available.
+ */
 export default function Controls({
 	settings,
 	onSettingsChange,

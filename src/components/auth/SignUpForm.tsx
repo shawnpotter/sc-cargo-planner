@@ -13,6 +13,20 @@ interface SignUpFormProps {
 	readonly onCancel: () => void
 }
 
+/**
+ * Renders a sign-up form for user registration.
+ *
+ * Allows users to enter a username, email, and password to create a new account.
+ * Handles form submission, displays loading and error states, and prevents duplicate submissions.
+ * On successful registration, calls the provided `onSubmit` callback with the entered credentials.
+ * The form can be cancelled via the `onCancel` callback.
+ *
+ * @param {SignUpFormProps} props - The props for the SignUpForm component.
+ * @param {(user: { email: string; password: string; name: string }) => void} props.onSubmit - Callback invoked after successful sign-up.
+ * @param {() => void} props.onCancel - Callback invoked when the user cancels the sign-up process.
+ *
+ * @returns {JSX.Element} The rendered sign-up form component.
+ */
 function SignUpForm({ onSubmit, onCancel }: SignUpFormProps) {
 	const [email, setEmail] = useState('')
 	const [password, setPassword] = useState('')

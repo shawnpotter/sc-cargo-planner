@@ -50,6 +50,22 @@ interface ContractFormProps {
 	readonly haulingMode: HaulingMode
 }
 
+/**
+ * Renders the contract creation and review form for cargo hauling operations.
+ *
+ * Allows users to configure contract details, add delivery points with cargo items,
+ * review current and saved contracts, and submit or reset the contract list.
+ * Supports scanning contracts (desktop only) and displays alerts for validation.
+ *
+ * @param onSubmit - Callback invoked with the list of contracts when the form is submitted.
+ * @param onReset - Callback invoked when the form is reset.
+ * @param haulingMode - The current hauling mode, determines contract payout visibility and scanner availability.
+ *
+ * @remarks
+ * - Uses context hooks for contract state management.
+ * - Integrates with an API for contract saving.
+ * - UI adapts for desktop and mobile environments.
+ */
 function ContractForm({ onSubmit, onReset, haulingMode }: ContractFormProps) {
 	const {
 		contracts,

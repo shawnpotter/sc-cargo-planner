@@ -8,6 +8,15 @@ interface AuthOptionsProps {
 	readonly onContinueAsGuest: () => void
 }
 
+/**
+ * Renders authentication options for the user, including buttons to sign in,
+ * create an account, or continue as a guest. Authenticated users gain access
+ * to saved configurations and extended system capabilities.
+ *
+ * @param onSignIn - Callback invoked when the "Sign In" button is clicked.
+ * @param onSignUp - Callback invoked when the "Create Account" button is clicked.
+ * @param onContinueAsGuest - Callback invoked when the "Continue as Guest" button is clicked.
+ */
 function AuthOptions({
 	onSignIn,
 	onSignUp,

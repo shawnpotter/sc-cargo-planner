@@ -114,6 +114,22 @@ interface LocationSelectProps {
 	placeholder?: string
 }
 
+/**
+ * Renders a searchable dropdown select for choosing a location.
+ *
+ * Locations are grouped by their parent (e.g., planet, moon), and can be filtered by a search query.
+ * The dropdown displays groups with labels for planets and moons, and lists selectable locations as items.
+ *
+ * @param value - The currently selected location value.
+ * @param onValueChange - Callback invoked when the selected location changes.
+ * @param placeholder - Optional placeholder text for the select input. Defaults to 'Select a location'.
+ *
+ * @remarks
+ * - Uses `getSelectableLocations()` to fetch available locations.
+ * - Uses `groupAndFilterLocations()` to group and filter locations based on the search query.
+ * - Displays a search input at the top of the dropdown for filtering locations.
+ * - Shows a message when no locations match the search query.
+ */
 function LocationSelect({
 	value,
 	onValueChange,

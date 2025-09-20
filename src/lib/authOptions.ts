@@ -5,6 +5,25 @@ import CredentialsProvider from 'next-auth/providers/credentials'
 import bcrypt from 'bcrypt'
 import prisma from '@/lib/prisma'
 
+/**
+ * Configuration options for NextAuth authentication in the application.
+ *
+ * @remarks
+ * - Uses PrismaAdapter for database integration with Prisma ORM.
+ * - Implements a custom credentials provider for username and password authentication.
+ * - Validates user credentials against stored hashed passwords using bcrypt.
+ * - Utilizes JWT-based session strategy.
+ * - Extends session callback to include user ID from JWT token.
+ * - Customizes the sign-in page route.
+ * - Requires a secret for NextAuth from environment variables.
+ *
+ * @property {Adapter} adapter - The Prisma adapter instance for NextAuth.
+ * @property {Array<Provider>} providers - List of authentication providers, including custom credentials.
+ * @property {SessionOptions} session - Session management configuration, using JWT strategy.
+ * @property {Callbacks} callbacks - Custom callback functions for session handling.
+ * @property {PagesOptions} pages - Custom page routes for authentication flows.
+ * @property {string} secret - Secret key for securing NextAuth sessions.
+ */
 export const authOptions: NextAuthOptions = {
 	adapter: PrismaAdapter(prisma),
 	providers: [

@@ -55,11 +55,18 @@ interface ContainerVoxelProps {
 }
 
 /**
- * ContainerVoxel component renders a 3D voxel representation of a container.
- * @param {Container} container - The container to be rendered.
- * @param {Function} onClick - Function to handle click events on the container.
- * @param {boolean} isHighlighted - Flag to indicate if the container is highlighted.
- * @param {Ship} ship - The ship object containing cargo grids and other details.
+ * Renders a 3D voxel representation of a cargo container within a ship's cargo grid.
+ *
+ * The container's position, rotation, color, and texture are dynamically determined based on its properties,
+ * highlighting state, and associated contract/cargo type. When highlighted, the container displays its contract index.
+ *
+ * @param container - The container data, including position, size, rotation, and contract indices.
+ * @param onClick - Callback invoked when the container mesh is clicked.
+ * @param isHighlighted - Whether the container is currently highlighted.
+ * @param ship - The ship object containing cargo grids and their positions/rotations.
+ * @param contracts - Array of contract objects, used to determine cargo type and delivery points.
+ *
+ * @returns A React Three Fiber group containing the container mesh, texture, and outline.
  */
 function ContainerVoxel({
 	container,

@@ -23,7 +23,19 @@ export interface LocationNode {
 }
 
 /**
- * Represents a graph of routes between locations.
+ * Represents a graph structure for routing between locations, supporting planetary constraints and optimal route finding.
+ *
+ * The `RouteGraph` class manages a set of location nodes and weighted edges between them, allowing for the modeling of
+ * planetary systems with surface locations, planets, and moons. It supports adding nodes and edges, calculating distances,
+ * and finding optimal routes between a starting location and multiple destinations, considering planetary entry/exit penalties
+ * and required planetary visits.
+ *
+ * Nodes are connected based on their parent planetary objects, and edges are weighted by Euclidean distance plus optional
+ * penalties for entering or leaving planetary atmospheres. The graph supports querying for neighbors, edge weights, and
+ * planetary constraints, as well as validating route feasibility.
+ *
+ * Typical usage involves building the graph from a canonical locations list, adding nodes and edges, and then using
+ * `findOptimalRoute` to determine the best path between locations.
  */
 export class RouteGraph {
 	private readonly nodes: Map<string, LocationNode>

@@ -1,6 +1,22 @@
 // @/utils/distortion.ts
 import { GraphNode } from '@/hooks/useGraphData'
 
+/**
+ * Applies a hierarchical distortion to a set of celestial graph nodes, repositioning them based on their type,
+ * parent relationships, and a distortion strength. This function is designed for visualizing star systems with
+ * planets, moons, orbital stations, Lagrange points, and surface locations, spreading them out for clarity while
+ * maintaining their hierarchical structure.
+ *
+ * The distortion uses a combination of logarithmic and linear scaling to exaggerate distances from the center,
+ * and applies special handling for moons (to avoid overlap), orbital stations, and Lagrange points (L1-L5).
+ * Surface locations are positioned relative to their distorted parent bodies.
+ *
+ * @param nodes - Array of `GraphNode` objects representing celestial bodies and locations.
+ * @param centerX - The X coordinate of the system's center (typically the star).
+ * @param centerY - The Y coordinate of the system's center.
+ * @param strength - A value between 0 and 1 controlling the intensity of the distortion (higher values spread objects further).
+ * @returns A new array of `GraphNode` objects with updated `distortedX`, `distortedY`, `x`, and `y` properties reflecting their distorted positions.
+ */
 export function applyHierarchicalDistortion(
 	nodes: GraphNode[],
 	centerX: number,

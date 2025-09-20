@@ -33,6 +33,39 @@ const ContractContext = createContext<ContractProviderType | undefined>(
 	undefined
 )
 
+/**
+ * Provides contract management functionality for the application.
+ *
+ * The `ContractProvider` component manages a list of contracts and the current contract being edited.
+ * It exposes methods for adding, updating, removing, importing, and clearing contracts, as well as
+ * managing delivery points within a contract. The provider also handles contract ID generation and
+ * ensures that contracts are properly reset and validated before saving.
+ *
+ * @param children - React children to be rendered within the provider.
+ *
+ * @remarks
+ * - Contracts are stored in local state and can be manipulated via context methods.
+ * - The current contract is managed separately and can be reset or updated independently.
+ * - Delivery points can be added or removed from the current contract before saving.
+ * - Saving the current contract creates a new contract entry and resets the editing state.
+ *
+ * @context
+ * Provides the following context value:
+ * - `contracts`: Array of all contracts.
+ * - `currentContract`: The contract currently being edited.
+ * - `addContract(contract)`: Adds a new contract.
+ * - `updateContract(id, updates)`: Updates an existing contract.
+ * - `removeContract(id)`: Removes a contract by ID.
+ * - `clearContracts()`: Clears all contracts and resets the current contract.
+ * - `setCurrentContract(contract)`: Sets the current contract.
+ * - `updateCurrentContract(updates)`: Updates fields of the current contract.
+ * - `saveCurrentContract()`: Saves the current contract as a new contract.
+ * - `resetCurrentContract()`: Resets the current contract to default values.
+ * - `addDeliveryPoint(deliveryPoint)`: Adds a delivery point to the current contract.
+ * - `removeDeliveryPoint(index)`: Removes a delivery point from the current contract by index.
+ * - `importContracts(contracts)`: Imports an array of contracts, replacing existing ones.
+ * - `addOCRContracts(contracts)`: Adds contracts from OCR extraction to the existing list.
+ */
 function ContractProvider({
 	children,
 }: Readonly<{ children: React.ReactNode }>) {

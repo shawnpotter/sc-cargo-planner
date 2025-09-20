@@ -20,6 +20,22 @@ export interface GraphEdge {
 	weight: number
 }
 
+/**
+ * Custom React hook for generating and managing graph data for a route planner.
+ *
+ * This hook constructs a graph of locations (nodes) and their connections (edges),
+ * including all selectable locations, stars, planets, and moons. It projects the
+ * 3D coordinates of each location to a normalized 2D canvas space, and creates
+ * edges based on location connectivity.
+ *
+ * The hook logs detailed information about moons and the graph construction process
+ * for debugging purposes.
+ *
+ * @returns An object containing:
+ * - `nodes`: Array of normalized graph nodes representing locations.
+ * - `edges`: Array of graph edges representing connections between locations.
+ * - `setNodes`: State setter for nodes, allowing manual updates.
+ */
 export function useGraphData() {
 	const [nodes, setNodes] = useState<GraphNode[]>([])
 	const [edges, setEdges] = useState<GraphEdge[]>([])

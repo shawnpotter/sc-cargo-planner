@@ -16,13 +16,18 @@ interface CargoHoldProps {
 }
 
 /**
- * CargoHold component renders the cargo hold of a ship, displaying containers and their information.
- * @param {Ship} ship - The ship object containing cargo grids and other details.
- * @param {Container[]} containers - Array of containers to be displayed in the cargo hold.
- * @param {Contract[]} contracts - Array of contracts associated with the containers.
- * @param {boolean} isInteractive - Whether the canvas should respond to touch/mouse interactions.
+ * Renders the cargo hold visualization for a ship, displaying its containers and contracts.
+ * Provides interactive selection and highlighting of containers within a 3D canvas.
+ *
+ * @param {CargoHoldProps} props - The properties for the CargoHold component.
+ * @param {Ship} props.ship - The ship data, including cargo grids and capacity.
+ * @param {Container[]} props.containers - The list of containers currently loaded in the ship.
+ * @param {Contract[]} props.contracts - The active contracts associated with the containers.
+ * @param {boolean} [props.isInteractive=true] - Whether the canvas and controls are interactive.
+ *
+ * @returns {JSX.Element} The rendered CargoHold component, including a 3D canvas and container info panel.
  */
-export default function CargoHold({
+function CargoHold({
 	ship,
 	containers,
 	contracts,
@@ -175,3 +180,5 @@ export default function CargoHold({
 		</div>
 	)
 }
+
+export { CargoHold }

@@ -23,6 +23,24 @@ interface ScannerProps {
 	onClose: () => void
 }
 
+/**
+ * Scanner component for OCR contract scanning.
+ *
+ * This component provides an interface for users to upload an image, process it using OCR (Optical Character Recognition),
+ * and parse the extracted text into contract data. It supports image splitting, processing progress indication, error handling,
+ * and allows users to apply the parsed contract data to a form.
+ *
+ * @param {Readonly<ScannerProps>} props - The props for the Scanner component.
+ * @param {() => void} props.onClose - Callback invoked when the scanner is closed.
+ *
+ * @returns {JSX.Element} The rendered Scanner component UI.
+ *
+ * @remarks
+ * - Utilizes a web worker for OCR processing.
+ * - Handles image upload, preview, settings adjustment, and result display.
+ * - Integrates with contract management via `useContracts`.
+ * - Displays progress and error messages during processing.
+ */
 export default function Scanner({ onClose }: Readonly<ScannerProps>) {
 	const { addOCRContracts } = useContracts()
 	const [isProcessing, setIsProcessing] = useState(false)

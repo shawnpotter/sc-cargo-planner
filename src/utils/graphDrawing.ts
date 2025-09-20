@@ -13,6 +13,20 @@ interface DrawGraphOptions {
 	showEdges: boolean
 }
 
+/**
+ * Renders a graph visualization onto a canvas context, including nodes, edges, orbital paths, and legends.
+ *
+ * @param ctx - The canvas rendering context to draw on.
+ * @param options - Configuration options for drawing the graph, including nodes, edges, transformation, and display settings.
+ *
+ * @remarks
+ * - Fills the canvas background with black before drawing.
+ * - Draws orbital paths and surface location groups behind nodes and edges.
+ * - Edges are drawn only if `showEdges` is true.
+ * - Node appearance can be customized based on hover and selection states.
+ * - Optionally displays node labels and edge weights.
+ * - Always draws a legend overlay.
+ */
 export function drawGraph(
 	ctx: CanvasRenderingContext2D,
 	options: DrawGraphOptions

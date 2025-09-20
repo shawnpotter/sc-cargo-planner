@@ -8,6 +8,19 @@ interface SignInFormProps {
 	readonly onCancel: () => void
 }
 
+/**
+ * Renders a sign-in form for user authentication.
+ *
+ * @param {object} props - The component props.
+ * @param {(credentials: { name: string; password: string }) => void} props.onSubmit - Callback invoked when the form is submitted with the entered username and password.
+ * @param {() => void} props.onCancel - Callback invoked when the cancel button is clicked.
+ *
+ * @returns {JSX.Element} The sign-in form component.
+ *
+ * @remarks
+ * - The form includes fields for username and password.
+ * - The "Authenticate" button submits the form, while the "Cancel" button triggers the onCancel callback.
+ */
 function SignInForm({ onSubmit, onCancel }: SignInFormProps) {
 	const [name, setName] = useState('')
 	const [password, setPassword] = useState('')

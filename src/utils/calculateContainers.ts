@@ -9,12 +9,18 @@ export enum HaulingMode {
 }
 
 /**
- * Calculates the optimal container size based on hauling mode and remaining quantity.
+ * Calculates the optimal container size for hauling based on the maximum allowed container size,
+ * the remaining quantity to be hauled, and the hauling mode.
  *
- * @param maxContainerSize - The maximum container size allowed
- * @param remainingQuantity - The remaining quantity to be transported
- * @param haulingMode - The hauling mode that determines container sizing strategy
- * @returns The optimal container size to use
+ * - For `HaulingMode.COMMODITY`, selects the largest standard container size that does not exceed
+ *   both the maximum container size and the remaining quantity.
+ * - For contract hauling, finds the largest container size (starting from `maxContainerSize`)
+ *   that fits within the remaining quantity by repeatedly halving the size.
+ *
+ * @param maxContainerSize - The maximum allowed container size.
+ * @param remainingQuantity - The quantity left to be hauled.
+ * @param haulingMode - The mode of hauling, which determines the selection strategy.
+ * @returns The optimal container size to use for the current hauling operation.
  */
 export function calculateOptimalContainerSize(
 	maxContainerSize: number,

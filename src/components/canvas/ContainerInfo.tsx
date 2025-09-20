@@ -7,9 +7,14 @@ interface ContainerInfoProps {
 }
 
 /**
- * ContainerInfo component displays detailed information about a selected container.
- * @param {Container | null} container - The selected container.
- * @param {Contract[]} contracts - Array of contracts associated with the containers.
+ * Displays detailed information about a specific cargo container, including its size,
+ * origin, destination, and contents. The component expects a container object and a list
+ * of contracts, and renders relevant details based on the container's indices.
+ *
+ * @param {ContainerInfoProps} props - The properties for the component.
+ * @param {Container} props.container - The container object containing indices and size.
+ * @param {Contract[]} props.contracts - The list of contracts associated with the container.
+ * @returns {JSX.Element | null} The rendered container information, or null if data is missing.
  */
 function ContainerInfo({ container, contracts }: ContainerInfoProps) {
 	if (!container || !contracts.length) return null

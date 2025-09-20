@@ -16,6 +16,21 @@ interface ShipSelectorProps {
  * ShipSelector component allows the user to select a ship from a modal.
  * @param {Function} onSelect - Function to handle the selection of a ship.
  */
+/**
+ * ShipSelector component allows users to select a ship from a list.
+ *
+ * @remarks
+ * Displays a button that opens a modal dialog containing a searchable list of ships.
+ * Users can filter ships by name and select one, triggering the `onSelect` callback.
+ *
+ * @param props - Component props
+ * @param props.onSelect - Callback function invoked when a ship is selected
+ *
+ * @example
+ * ```tsx
+ * <ShipSelector onSelect={(ship) => console.log(ship)} />
+ * ```
+ */
 export default function ShipSelector({
 	onSelect,
 }: Readonly<ShipSelectorProps>) {

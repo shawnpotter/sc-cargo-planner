@@ -10,6 +10,17 @@ interface ModalProps {
 	readonly children: React.ReactNode
 }
 
+/**
+ * Modal component that displays its children in a centered overlay.
+ * Prevents body scroll when open and restores it when closed.
+ *
+ * @param isOpen - Determines if the modal is visible.
+ * @param onClose - Callback function invoked when the modal is requested to close.
+ * @param title - Title text displayed at the top of the modal.
+ * @param children - Content to be rendered inside the modal.
+ *
+ * @returns The modal JSX if open, otherwise null.
+ */
 export default function Modal({
 	isOpen,
 	onClose,

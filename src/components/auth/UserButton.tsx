@@ -9,6 +9,19 @@ interface UserButtonProps {
 	readonly onEditAccount: () => void
 }
 
+/**
+ * Renders a user button with a dropdown menu for account actions.
+ *
+ * @param {UserButtonProps} props - The props for the UserButton component.
+ * @param {string} props.name - The name of the user to display on the button.
+ * @param {() => void} props.onEditAccount - Callback function invoked when the "Edit Account" option is selected.
+ *
+ * @remarks
+ * - Displays a dropdown menu when the button is clicked.
+ * - Dropdown contains options to edit the account and to log out.
+ * - Closes the dropdown when clicking outside of it.
+ * - Handles logout asynchronously and redirects to the home page on success.
+ */
 function UserButton({ name, onEditAccount }: UserButtonProps) {
 	const [isOpen, setIsOpen] = useState(false)
 	const dropdownRef = useRef<HTMLDivElement>(null)

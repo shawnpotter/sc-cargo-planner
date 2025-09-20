@@ -10,6 +10,19 @@ interface ResultsProps {
 	onApply: () => void
 }
 
+/**
+ * Displays the results of OCR processing and contract data extraction.
+ *
+ * @component
+ * @param {object} props - The component props.
+ * @param {OcrResult} props.ocrResult - The raw OCR result containing text and confidence for left and right columns.
+ * @param {ParsedContractData | null} props.parsedData - The parsed contract data extracted from the OCR result.
+ * @param {() => void} props.onNewImage - Callback invoked when the user requests to process a new image.
+ * @param {() => void} props.onClose - Callback invoked when the user cancels or closes the results view.
+ * @param {() => void} props.onApply - Callback invoked when the user applies the extracted contract data to the form.
+ *
+ * @returns {JSX.Element} The rendered results view, including confidence summary, extracted contract data, raw OCR text, and action buttons.
+ */
 function Results({
 	ocrResult,
 	parsedData,

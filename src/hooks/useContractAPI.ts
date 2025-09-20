@@ -2,6 +2,32 @@
 import { useState, useCallback } from 'react'
 import { Contract } from '@/constants/types'
 
+/**
+ * Custom React hook for managing contract-related API operations.
+ *
+ * Provides methods to fetch, save, update, delete, and clear contracts via RESTful endpoints.
+ * Handles loading and error states internally.
+ *
+ * @returns An object containing:
+ * - `loading`: Indicates if an API request is in progress.
+ * - `error`: Contains the error message if an API request fails, otherwise `null`.
+ * - `fetchContracts`: Fetches the list of contracts from the server.
+ * - `saveContracts`: Saves an array of contracts to the server.
+ * - `updateContract`: Updates a specific contract by ID.
+ * - `deleteContract`: Deletes a specific contract by ID.
+ * - `clearAllContracts`: Deletes all contracts from the server.
+ *
+ * @example
+ * const {
+ *   loading,
+ *   error,
+ *   fetchContracts,
+ *   saveContracts,
+ *   updateContract,
+ *   deleteContract,
+ *   clearAllContracts,
+ * } = useContractAPI();
+ */
 function useContractAPI() {
 	const [loading, setLoading] = useState(false)
 	const [error, setError] = useState<string | null>(null)

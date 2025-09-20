@@ -3,11 +3,28 @@ import { ParsedContract } from '@/components/ocr/parser/types'
 import { locations } from '@/data/locations'
 
 // Get all location names from the locations file
+/**
+ * Sorted list of known location names used for fuzzy matching.
+ *
+ * The array is sorted by descending length to prefer longer (more specific)
+ * location names when doing substring matches (e.g. "Area 18" vs "Area").
+ * Used by {@link findBestLocationMatch}.
+ */
 const KNOWN_LOCATIONS = locations
 	.map((loc) => loc.name)
 	.sort((a, b) => b.length - a.length)
 
-// Common OCR character replacements
+/**
+ * Clean OCR output text by applying a set of heuristic replacements.
+ *
+ * This function attempts to fix common OCR misreads that show up in
+ * contract scans (for example confusing "O" with "0" or "l" with "1").
+ * It is intentionally permissive and performs only deterministic string
+ * replacements; callers should still validate important parsed fields.
+ *
+ * @param text - Raw OCR-extracted text
+ * @returns A cleaned string with common OCR mistakes corrected
+ */
 const cleanOCRText = (text: string): string => {
 	return (
 		text
@@ -26,6 +43,18 @@ const cleanOCRText = (text: string): string => {
 	) // Remove pipe characters
 }
 
+/**
+ * Main entry point for parsing a contract's OCR text.
+ *
+ * Performs a cleaning pass on each column, then extracts information from
+ * the left and right columns. Returns a {@link ParsedContract} object which
+ * may include rank, maxContainerSize, origin, payout, contractedBy and
+ * destinations.
+ *
+ * @param leftText - OCR text from the left column
+ * @param rightText - OCR text from the right column
+ * @returns ParsedContract - parsed representation (may be partial)
+ */
 export function parseContractText(
 	leftText: string,
 	rightText: string
@@ -50,6 +79,15 @@ export function parseContractText(
 	return result
 }
 
+/**
+ * Parse information found in the left column of the contract.
+ *
+ * Looks for rank, max container size and attempts to infer the origin
+ * from a set of heuristic patterns.
+ *
+ * @param text - Cleaned text from the left column
+ * @param result - Mutable ParsedContract to populate
+ */
 function parseLeftColumn(text: string, result: ParsedContract) {
 	// Parse rank
 	const rankMatch = RegExp(/^(.*?)\s*[-—]\s*Direct\s+Planetary/i).exec(text)
@@ -88,6 +126,16 @@ function parseLeftColumn(text: string, result: ParsedContract) {
 	}
 }
 
+/**
+ * Parse information found in the right column of the contract.
+ *
+ * Extracts payout, contracted-by, and the PRIMARY OBJECTIVES block. The
+ * function will also try to infer origin locations and delegate delivery
+ * parsing to {@link parseDeliveryObjectives}.
+ *
+ * @param text - Cleaned text from the right column
+ * @param result - Mutable ParsedContract to populate
+ */
 function parseRightColumn(text: string, result: ParsedContract) {
 	// Parse payout
 	const payoutMatch = RegExp(/Reward\s*[x\s]*(\d{1,3}(?:[,\s]\d{3})*)/i).exec(
@@ -136,6 +184,16 @@ function parseRightColumn(text: string, result: ParsedContract) {
 	}
 }
 
+/**
+ * Parse delivery objective statements from the PRIMARY OBJECTIVES block.
+ *
+ * Matches lines such as: "Deliver 2/3 SCU of Medical Supplies to Area 18 on ArcCorp."
+ * Aggregates cargo quantities per destination and normalizes simple "on"
+ * parent-body suffixes.
+ *
+ * @param text - Objectives text block
+ * @param result - Mutable ParsedContract to populate destinations
+ */
 function parseDeliveryObjectives(text: string, result: ParsedContract) {
 	const destinations: ParsedContract['destinations'] = []
 	const destinationMap = new Map<string, (typeof destinations)[0]>()
@@ -228,6 +286,16 @@ function parseDeliveryObjectives(text: string, result: ParsedContract) {
 	}
 }
 
+/**
+ * Attempt to resolve a free-form location string to a canonical known
+ * location name from the `locations` dataset.
+ *
+ * Strategy: exact case-insensitive match, then substring matches, then
+ * containment checks (preferring longer known names via sorting).
+ *
+ * @param text - Free-form location string
+ * @returns Canonical location name or null if none found
+ */
 // Fuzzy location matching helper with improved accuracy
 function findBestLocationMatch(text: string): string | null {
 	if (!text) return null

@@ -8,6 +8,44 @@ export interface Transform {
 	offsetY: number
 }
 
+/**
+ * Custom React hook for managing interactive canvas transformations and node selection.
+ *
+ * This hook provides state and handlers for zooming, panning, hovering, and selecting nodes
+ * on a canvas, supporting features such as:
+ * - Zooming in/out with mouse wheel, with scale and offset calculations to keep the mouse position stable.
+ * - Panning the canvas by dragging.
+ * - Hit detection for hovering and selecting nodes, with zoom-based visibility and selectable logic.
+ * - Utility for converting actual zoom to display zoom.
+ * - Resetting the view to the default state.
+ *
+ * @returns An object containing:
+ * - `transform`: The current canvas transformation (scale, offsetX, offsetY).
+ * - `isDragging`: Whether the canvas is currently being dragged.
+ * - `hoveredNode`: The ID of the currently hovered node, or `null`.
+ * - `selectedNode`: The ID of the currently selected node, or `null`.
+ * - `transformPoint(x, y)`: Function to transform a point according to the current canvas transformation.
+ * - `handleWheel(e)`: Handler for mouse wheel events to zoom the canvas.
+ * - `handleMouseDown(e)`: Handler for mouse down events to start panning.
+ * - `handleMouseMove(e, nodes)`: Handler for mouse move events to pan or hover nodes.
+ * - `handleMouseUp()`: Handler for mouse up events to stop panning.
+ * - `handleCanvasClick(e, nodes)`: Handler for mouse click events to select nodes.
+ * - `resetView()`: Function to reset the canvas view to its default state.
+ * - `setIsDragging`: Setter for the dragging state.
+ * - `setHoveredNode`: Setter for the hovered node.
+ * - `getDisplayZoom(actualZoom)`: Utility to convert actual zoom to display zoom.
+ *
+ * @example
+ * const canvasInteraction = useCanvasInteraction();
+ * // Use handlers in your canvas component:
+ * <canvas
+ *   onWheel={canvasInteraction.handleWheel}
+ *   onMouseDown={canvasInteraction.handleMouseDown}
+ *   onMouseMove={(e) => canvasInteraction.handleMouseMove(e, nodes)}
+ *   onMouseUp={canvasInteraction.handleMouseUp}
+ *   onClick={(e) => canvasInteraction.handleCanvasClick(e, nodes)}
+ * />
+ */
 export function useCanvasInteraction() {
 	const [transform, setTransform] = useState<Transform>({
 		scale: 0.6, // Start at 60% zoom (will display as 20%)
