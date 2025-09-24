@@ -14,6 +14,7 @@ import {
 } from '@/components/ui/select'
 import { HaulingMode } from '@/utils/calculateContainers'
 import Scanner from '@/components/ocr/Scanner'
+import { DeliveryPointEditor } from '@/components/cargo/DeliveryPointEditor'
 import {
 	AlertDialog,
 	AlertDialogContent,
@@ -89,22 +90,8 @@ function ContractForm({ onSubmit, onReset, haulingMode }: ContractFormProps) {
 		cargo: [],
 		quantity: 0,
 	})
-	const [newCargo, setNewCargo] = useState<CargoEntry>({
-		cargoType: '',
-		quantity: 0,
-	})
 
 	const generateId = () => `id-${Math.random().toString(36).substring(2, 11)}`
-
-	const addCargoToDelivery = () => {
-		if (newCargo.cargoType && newCargo.quantity > 0) {
-			setNewDelivery((prev) => ({
-				...prev,
-				cargo: [...prev.cargo, { ...newCargo, id: generateId() }],
-			}))
-			setNewCargo({ cargoType: '', quantity: 0 })
-		}
-	}
 
 	const handleAddDeliveryPoint = () => {
 		if (newDelivery.location && newDelivery.cargo.length > 0) {
@@ -156,12 +143,11 @@ function ContractForm({ onSubmit, onReset, haulingMode }: ContractFormProps) {
 	const handleReset = () => {
 		clearContracts()
 		setNewDelivery({ location: '', cargo: [], quantity: 0 })
-		setNewCargo({ cargoType: '', quantity: 0 })
 		onReset()
 	}
 
 	return (
-		<>
+		<div className='mx-auto w-full max-w-4xl space-y-3'>
 			{showScanner && <Scanner onClose={() => setShowScanner(false)} />}
 
 			{/* Alert dialog replacement for native alert() */}
@@ -250,116 +236,18 @@ function ContractForm({ onSubmit, onReset, haulingMode }: ContractFormProps) {
 					</div>
 
 					{/* Delivery Points */}
-					<div className='bg-card border border-border p-4 rounded shadow-sm flex flex-col gap-4'>
-						<div>
-							<label htmlFor='destination'>Select a destination</label>
-							<LocationSelect
-								value={newDelivery.location}
-								onValueChange={(value) =>
-									setNewDelivery((prev) => ({ ...prev, location: value }))
-								}
-							/>
-						</div>
-
-						{/* Cargo management section - same as before */}
-						<div className='bg-card p-3 rounded border border-border'>
-							<h3 className='text-sm font-semibold text-foreground mb-2'>
-								Add Cargo
-							</h3>
-							<div className='flex items-end gap-2'>
-								<div className='flex-1'>
-									<div>
-										<label htmlFor='cargoType'>Cargo Type</label>
-										<Input
-											id='cargoType'
-											type='text'
-											value={newCargo.cargoType}
-											placeholder='Cargo Type'
-											onChange={(e) =>
-												setNewCargo((prev) => ({
-													...prev,
-													cargoType: e.target.value,
-												}))
-											}
-										/>
-									</div>
-								</div>
-								<div className='w-24'>
-									<div className='flex items-center gap-2'>
-										<Input
-											type='number'
-											value={newCargo.quantity || ''}
-											min='1'
-											onChange={(e) =>
-												setNewCargo((prev) => ({
-													...prev,
-													quantity: parseInt(e.target.value) || 0,
-												}))
-											}
-											placeholder='Qty'
-										/>
-										<span className='text-xs text-muted-foreground'>SCU</span>
-									</div>
-								</div>
-								<Button
-									onClick={(e) => {
-										e.preventDefault()
-										addCargoToDelivery()
-									}}
-									variant='default'
-								>
-									Add
-								</Button>
-							</div>
-						</div>
-
-						{newDelivery.cargo.length > 0 && (
-							<div className='bg-card p-3 rounded border border-border'>
-								<h4 className='text-sm font-semibold text-foreground mb-2'>
-									Current Cargo:
-								</h4>
-								<div className='flex flex-col gap-2'>
-									{newDelivery.cargo.map((cargo: CargoItem) => (
-										<div
-											key={cargo.id ?? `${cargo.cargoType}-${cargo.quantity}`}
-											className='flex justify-between items-center p-2 rounded border border-border'
-										>
-											<span className='text-sm text-foreground'>
-												{cargo.cargoType}: {cargo.quantity} SCU
-											</span>
-											<button
-												onClick={(e) => {
-													e.preventDefault()
-													const idx = newDelivery.cargo.findIndex(
-														(c: CargoItem) => c.id === cargo.id
-													)
-													if (idx >= 0) removeCargoFromDelivery(idx)
-												}}
-												className='text-destructive text-xs'
-											>
-												Remove
-											</button>
-										</div>
-									))}
-								</div>
-							</div>
-						)}
-
-						<div className='flex justify-start gap-2 mt-4'>
-							<Button
-								onClick={(e) => {
-									e.preventDefault()
-									handleAddDeliveryPoint()
-								}}
-								variant='default'
-								disabled={
-									!newDelivery.location || newDelivery.cargo.length === 0
-								}
-							>
-								Add to Contract
-							</Button>
-						</div>
-					</div>
+					<DeliveryPointEditor
+						value={newDelivery}
+						onChange={(next) => setNewDelivery(next)}
+						onAddDelivery={() => handleAddDeliveryPoint()}
+						onAddCargo={(cargo) =>
+							setNewDelivery((prev) => ({
+								...prev,
+								cargo: [...prev.cargo, cargo],
+							}))
+						}
+						onRemoveCargo={(index) => removeCargoFromDelivery(index)}
+					/>
 
 					{/* end left column */}
 				</div>
@@ -554,7 +442,7 @@ function ContractForm({ onSubmit, onReset, haulingMode }: ContractFormProps) {
 					</Button>
 				</div>
 			</form>
-		</>
+		</div>
 	)
 }
 

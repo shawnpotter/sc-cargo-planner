@@ -4,7 +4,6 @@
 import { useState } from 'react'
 import { Ship } from '@/constants/types'
 import { ships } from '@/data/ships'
-import Modal from '@/components/Modal'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 
@@ -13,28 +12,13 @@ interface ShipSelectorProps {
 }
 
 /**
- * ShipSelector component allows the user to select a ship from a modal.
- * @param {Function} onSelect - Function to handle the selection of a ship.
- */
-/**
- * ShipSelector component allows users to select a ship from a list.
- *
- * @remarks
- * Displays a button that opens a modal dialog containing a searchable list of ships.
- * Users can filter ships by name and select one, triggering the `onSelect` callback.
- *
- * @param props - Component props
- * @param props.onSelect - Callback function invoked when a ship is selected
- *
- * @example
- * ```tsx
- * <ShipSelector onSelect={(ship) => console.log(ship)} />
- * ```
+ * ShipSelector now renders inline (no modal) so it can be used inside the
+ * shadcn Drawer or other containers. Each ship is shown as a styled Button
+ * for consistent look & feel.
  */
 export default function ShipSelector({
 	onSelect,
 }: Readonly<ShipSelectorProps>) {
-	const [isModalOpen, setIsModalOpen] = useState(false)
 	const [searchQuery, setSearchQuery] = useState('')
 
 	const filteredShips = ships.filter((ship) =>
@@ -42,45 +26,39 @@ export default function ShipSelector({
 	)
 
 	return (
-		<div>
-			<Button
-				onClick={() => setIsModalOpen(true)}
-				variant='default'
-			>
-				Select Ship
-			</Button>
+		<div className='mx-auto w-full max-w-2xl space-y-3'>
+			<div>
+				<label
+					htmlFor='ship-search'
+					className='sr-only'
+				>
+					Search ships
+				</label>
+				<Input
+					id='ship-search'
+					type='text'
+					placeholder='Search ships...'
+					value={searchQuery}
+					onChange={(e) => setSearchQuery(e.target.value)}
+				/>
+			</div>
 
-			<Modal
-				isOpen={isModalOpen}
-				onClose={() => setIsModalOpen(false)}
-				title='Select a Ship'
-			>
-				<div>
-					<div>
-						<label htmlFor='ship-search'>Search ships</label>
-						<Input
-							id='ship-search'
-							type='text'
-							placeholder='Search ships...'
-							value={searchQuery}
-							onChange={(e) => setSearchQuery(e.target.value)}
-						/>
-					</div>
-					<div>
-						{filteredShips.map((ship) => (
-							<button
-								key={ship.name}
-								onClick={() => {
-									onSelect(ship)
-									setIsModalOpen(false)
-								}}
-							>
-								{ship.name} ({ship.totalCapacity} SCU)
-							</button>
-						))}
-					</div>
-				</div>
-			</Modal>
+			<div className='grid gap-2 overflow-y-auto max-h-64'>
+				{filteredShips.map((ship) => (
+					<Button
+						key={ship.name}
+						variant='outline'
+						size='default'
+						onClick={() => onSelect(ship)}
+						className='justify-between w-full'
+					>
+						<span className='truncate'>{ship.name}</span>
+						<span className='text-sm text-muted-foreground ml-2'>
+							{ship.totalCapacity} SCU
+						</span>
+					</Button>
+				))}
+			</div>
 		</div>
 	)
 }

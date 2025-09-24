@@ -249,7 +249,7 @@ export default function Cargo() {
 					)}
 
 					{activeView === 'cargo' && (
-						<div className='p-4 flex flex-col gap-4'>
+						<div className='p-4 flex flex-col gap-4 mx-auto w-full max-w-4xl'>
 							<HaulingModeToggle
 								currentMode={haulingMode}
 								onChange={handleHaulingModeChange}
