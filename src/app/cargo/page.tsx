@@ -2,54 +2,24 @@
 'use client'
 import { useState } from 'react'
 import { useSession } from 'next-auth/react'
-import { Ship, Container, Contract, RouteAlgorithm } from '@/constants/types'
+import { useCargo } from '@/providers/CargoProvider'
+import { useContracts } from '@/providers/ContractProvider'
+import { useCargoNavigation } from '@/hooks/useCargoNavigation'
 import { CargoHold } from '@/components/canvas/CargoHold'
-import ShipSelector from '@/components/cargo/ShipSelector'
-import { ContractForm } from '@/components/cargo/ContractForm'
-import { CrewPaymentDistribution } from '@/components/cargo/CrewPaymentDistribution'
-import { HaulingModeToggle } from '@/components/cargo/HaulingModeToggle'
-import { handleLoadCargo } from '@/utils/handleLoadCargo'
-import {
-	AlertDialog,
-	AlertDialogContent,
-	AlertDialogHeader,
-	AlertDialogTitle,
-	AlertDialogDescription,
-	AlertDialogFooter,
-	AlertDialogAction,
-} from '@/components/ui/alert-dialog'
-import { HaulingMode } from '@/utils/calculateContainers'
 import { UserSettingsModal } from '@/components/auth/UserSettingsModal'
-import {
-	Drawer,
-	DrawerContent,
-	DrawerHeader,
-	DrawerTitle,
-	DrawerClose,
-} from '@/components/ui/drawer'
 import {
 	CubeIcon,
 	DocumentTextIcon,
 	CurrencyDollarIcon,
 } from '@heroicons/react/24/outline'
 
-type ViewMode = 'ship' | 'cargo' | 'payment'
-
 export default function Cargo() {
 	const { data: session, status } = useSession()
-	const [selectedShip, setSelectedShip] = useState<Ship | null>(null)
-	const [containers, setContainers] = useState<Container[]>([])
-	const [contracts, setContracts] = useState<Contract[]>([])
-	const [haulingMode, setHaulingMode] = useState<HaulingMode>(
-		HaulingMode.CONTRACT
-	)
+	const { navigateTo } = useCargoNavigation()
+	const { selectedShip, containers } = useCargo()
+	const { contracts } = useContracts()
 	const [isSettingsOpen, setIsSettingsOpen] = useState(false)
-	const [activeView, setActiveView] = useState<ViewMode>('ship')
-	const [isDrawerOpen, setIsDrawerOpen] = useState(false)
 	const [isCanvasInteractive, setIsCanvasInteractive] = useState(false)
-	const [alertOpen, setAlertOpen] = useState(false)
-	const [alertTitle, setAlertTitle] = useState('')
-	const [alertDescription, setAlertDescription] = useState('')
 
 	const handleSaveSettings = async (userData: {
 		name: string
@@ -72,27 +42,6 @@ export default function Cargo() {
 		}
 	}
 
-	const handleReset = () => {
-		setContainers([])
-		setContracts([])
-	}
-
-	const handleHaulingModeChange = (mode: HaulingMode) => {
-		setHaulingMode(mode)
-		handleReset()
-	}
-
-	const handleViewChange = (view: ViewMode) => {
-		setActiveView(view)
-		setIsDrawerOpen(true)
-	}
-
-	let drawerTitle = 'Crew Payment'
-	if (activeView === 'ship') {
-		drawerTitle = 'Select Ship'
-	} else if (activeView === 'cargo') {
-		drawerTitle = 'Cargo Manifest'
-	}
 	return (
 		<div className='min-h-screen flex flex-col bg-background text-foreground'>
 			{/* Main content area with canvas */}
@@ -158,162 +107,60 @@ export default function Cargo() {
 						</>
 					) : (
 						<div className='flex flex-col items-center justify-center h-full w-full py-12'>
-							<div className='flex flex-col items-center gap-2'>
-								<CubeIcon className='w-10 h-10 text-muted-foreground' />
-								<p className='font-semibold'>
-									Select a ship to view cargo hold
-								</p>
+							<div className='flex flex-col items-center gap-4'>
+								<CubeIcon className='w-16 h-16 text-muted-foreground' />
+								<div className='text-center'>
+									<p className='font-semibold text-lg mb-2'>No ship selected</p>
+									<p className='text-muted-foreground mb-6'>
+										Select a ship to begin cargo operations
+									</p>
+								</div>
+								<button
+									onClick={() => navigateTo('/cargo/ships')}
+									className='px-6 py-3 bg-primary text-primary-foreground rounded-md hover:bg-primary/90 transition font-semibold'
+								>
+									Select Ship
+								</button>
 							</div>
 						</div>
 					)}
 				</div>
 			</main>
+
 			{/* Static bottom navigation bar */}
 			<nav className='sticky bottom-0 left-0 w-full bg-background border-t border-muted-foreground/10 z-30'>
-				<div className='flex justify-around items-center py-2 gap-2'>
+				<div className='flex w-full'>
 					<button
-						aria-label='Ship view'
-						onClick={() => handleViewChange('ship')}
-						className='flex flex-col items-center px-3 py-1 rounded hover:bg-muted/60 focus:outline-none focus:ring-2 focus:ring-primary/40 transition'
+						aria-label='Ship selection'
+						onClick={() => navigateTo('/cargo/ships')}
+						className='flex-1 flex flex-col items-center py-3 px-2 border-r border-muted-foreground/10 hover:bg-muted/60 focus:outline-none focus:ring-2 focus:ring-primary/40 focus:ring-inset transition'
 					>
 						<CubeIcon className='w-6 h-6 mb-1' />
-						<span className='text-xs font-medium'>Ship</span>
+						<span className='text-xs font-medium'>Ships</span>
 					</button>
 					<button
-						aria-label='Cargo manifest'
-						onClick={() => handleViewChange('cargo')}
-						className='flex flex-col items-center px-3 py-1 rounded hover:bg-muted/60 focus:outline-none focus:ring-2 focus:ring-primary/40 transition'
+						aria-label='Contract configuration'
+						onClick={() => navigateTo('/cargo/contracts')}
+						className='flex-1 flex flex-col items-center py-3 px-2 border-r border-muted-foreground/10 hover:bg-muted/60 focus:outline-none focus:ring-2 focus:ring-primary/40 focus:ring-inset transition'
 					>
 						<DocumentTextIcon className='w-6 h-6 mb-1' />
-						<span className='text-xs font-medium'>Cargo</span>
+						<span className='text-xs font-medium'>Contracts</span>
 					</button>
 					<button
-						aria-label='Crew payment'
-						onClick={() => handleViewChange('payment')}
-						disabled={contracts.length === 0}
-						className='flex flex-col items-center px-3 py-1 rounded hover:bg-muted/60 focus:outline-none focus:ring-2 focus:ring-primary/40 transition disabled:opacity-50 disabled:cursor-not-allowed'
+						aria-label='Payment distribution'
+						onClick={() => navigateTo('/cargo/payments')}
+						disabled={
+							contracts.length === 0 ||
+							contracts.every((c) => !c.payout || c.payout <= 0)
+						}
+						className='flex-1 flex flex-col items-center py-3 px-2 hover:bg-muted/60 focus:outline-none focus:ring-2 focus:ring-primary/40 focus:ring-inset transition disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:bg-transparent'
 					>
 						<CurrencyDollarIcon className='w-6 h-6 mb-1' />
-						<span className='text-xs font-medium'>Payment</span>
+						<span className='text-xs font-medium'>Payments</span>
 					</button>
 				</div>
 			</nav>
-			{/* Mobile drawer for content */}
-			<Drawer
-				open={isDrawerOpen}
-				onOpenChange={(open) => {
-					if (!open) setIsDrawerOpen(false)
-				}}
-			>
-				<DrawerContent className='bg-background border-t border-muted-foreground/10 rounded-t-xl shadow-xl'>
-					<DrawerHeader className='flex flex-row items-center justify-between pb-2 border-b border-muted-foreground/10'>
-						<DrawerTitle className='text-lg font-bold tracking-wide'>
-							{drawerTitle}
-						</DrawerTitle>
-						<DrawerClose asChild>
-							<button
-								onClick={() => setIsDrawerOpen(false)}
-								title='Close drawer'
-								className='ml-auto p-2 rounded-full hover:bg-muted/60 focus:outline-none focus:ring-2 focus:ring-primary/40'
-							>
-								<span
-									aria-hidden='true'
-									className='text-2xl'
-								>
-									&times;
-								</span>
-							</button>
-						</DrawerClose>
-					</DrawerHeader>
-					{activeView === 'ship' && (
-						<div className='p-4 flex flex-col gap-4'>
-							<ShipSelector
-								onSelect={(ship) => {
-									setSelectedShip(ship)
-									setContainers([])
-									setActiveView('cargo')
-									setIsDrawerOpen(false)
-								}}
-							/>
-							{selectedShip && (
-								<div className='mt-2 p-2 rounded bg-muted/30'>
-									<h3 className='font-semibold text-base'>
-										{selectedShip.name}
-									</h3>
-									<p className='text-xs text-muted-foreground'>
-										Capacity: {selectedShip.totalCapacity} SCU
-									</p>
-								</div>
-							)}
-						</div>
-					)}
 
-					{activeView === 'cargo' && (
-						<div className='p-4 flex flex-col gap-4 mx-auto w-full max-w-4xl'>
-							<HaulingModeToggle
-								currentMode={haulingMode}
-								onChange={handleHaulingModeChange}
-							/>
-							<ContractForm
-								haulingMode={haulingMode}
-								onSubmit={(newContracts) => {
-									if (selectedShip) {
-										setContracts(newContracts)
-										handleLoadCargo({
-											contracts: newContracts,
-											selectedShip,
-											setContainers,
-											routeAlgorithm: RouteAlgorithm.A_STAR,
-											haulingMode,
-										})
-										setIsDrawerOpen(false)
-										setIsCanvasInteractive(true)
-									} else {
-										setAlertTitle('No ship selected')
-										setAlertDescription('Please select a ship first')
-										setAlertOpen(true)
-										setActiveView('ship')
-									}
-								}}
-								onReset={handleReset}
-							/>
-						</div>
-					)}
-
-					{activeView === 'payment' && contracts.length > 0 && (
-						<div className='p-4'>
-							<CrewPaymentDistribution
-								contracts={contracts.filter(
-									(c) => c.payout !== undefined && c.payout > 0
-								)}
-								haulingMode={haulingMode}
-							/>
-						</div>
-					)}
-				</DrawerContent>
-			</Drawer>
-
-			{/* Global alert dialog for this page */}
-			<AlertDialog
-				open={alertOpen}
-				onOpenChange={(open) => setAlertOpen(open)}
-			>
-				{alertOpen && (
-					<AlertDialogContent>
-						<AlertDialogHeader>
-							<AlertDialogTitle>{alertTitle}</AlertDialogTitle>
-							<AlertDialogDescription>
-								{alertDescription}
-							</AlertDialogDescription>
-						</AlertDialogHeader>
-						<AlertDialogFooter>
-							<AlertDialogAction onClick={() => setAlertOpen(false)}>
-								OK
-							</AlertDialogAction>
-						</AlertDialogFooter>
-					</AlertDialogContent>
-				)}
-			</AlertDialog>
 			{/* Settings modal */}
 			{status === 'authenticated' && session?.user && (
 				<UserSettingsModal

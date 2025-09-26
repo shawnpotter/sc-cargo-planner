@@ -147,7 +147,7 @@ function ContractForm({ onSubmit, onReset, haulingMode }: ContractFormProps) {
 	}
 
 	return (
-		<div className='mx-auto w-full max-w-4xl space-y-3'>
+		<div className='grid gap-2 overflow-y-auto max-h-[40em] pb-20'>
 			{showScanner && <Scanner onClose={() => setShowScanner(false)} />}
 
 			{/* Alert dialog replacement for native alert() */}
@@ -174,7 +174,7 @@ function ContractForm({ onSubmit, onReset, haulingMode }: ContractFormProps) {
 
 			<form
 				onSubmit={handleSubmit}
-				className='grid grid-cols-1 md:grid-cols-2 gap-6 max-w-4xl mx-auto w-full max-h-[80vh] overflow-y-auto'
+				className='grid grid-cols-1 md:grid-cols-2 gap-6 max-w-4xl mx-auto w-full overflow-y-auto'
 			>
 				{/* LEFT COLUMN: main form sections + contract review */}
 				<div className='md:col-span-1 flex flex-col gap-6'>
@@ -345,7 +345,7 @@ function ContractForm({ onSubmit, onReset, haulingMode }: ContractFormProps) {
 							)}
 					</div>
 					{contracts.length > 0 && (
-						<div className='bg-card p-3 rounded overflow-auto max-h-[70vh]'>
+						<div className='bg-card p-3 rounded overflow-auto'>
 							<h2 className='text-lg font-semibold mb-2'>
 								Saved Contracts ({contracts.length})
 							</h2>

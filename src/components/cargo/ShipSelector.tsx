@@ -43,7 +43,7 @@ export default function ShipSelector({
 				/>
 			</div>
 
-			<div className='grid gap-2 overflow-y-auto max-h-64'>
+			<div className='grid gap-2 overflow-y-auto max-h-92'>
 				{filteredShips.map((ship) => (
 					<Button
 						key={ship.name}
