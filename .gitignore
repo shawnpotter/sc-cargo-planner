@@ -46,6 +46,3 @@ contract_examples/
 *.traineddata
 
 package-lock.json
-vitest-report.html
-bg.png
-vitest-report.html
