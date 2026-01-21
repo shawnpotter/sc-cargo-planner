@@ -40,3 +40,12 @@ yarn-error.log*
 *.tsbuildinfo
 next-env.d.ts
 .github/instructions/
+contract_examples/
+
+# tesseract.js training data
+*.traineddata
+
+package-lock.json
+vitest-report.html
+bg.png
+vitest-report.html

@@ -1,7 +1,16 @@
 // app/api/auth/[...nextauth]/route.ts
-import NextAuth from 'next-auth/next'
-import { authOptions } from '@/lib/authOptions'
+import { NextResponse } from 'next/server'
 
-const handler = NextAuth(authOptions)
+export async function GET() {
+	return NextResponse.json(
+		{ error: 'Authentication is disabled in this beta build' },
+		{ status: 503 },
+	)
+}
 
-export { handler as GET, handler as POST }
+export async function POST() {
+	return NextResponse.json(
+		{ error: 'Authentication is disabled in this beta build' },
+		{ status: 503 },
+	)
+}
