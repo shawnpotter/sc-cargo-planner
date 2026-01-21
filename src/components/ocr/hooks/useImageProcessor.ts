@@ -1,4 +1,4 @@
-// app/components/OCRScanner/hooks/useImageProcessor.ts
+// @/components/ocr/hooks/useImageProcessor.ts
 import { useCallback, useRef } from 'react'
 import { ImageProcessingSettings } from '@/components/ocr/parser/types'
 import { applyImageProcessing } from '@/components/ocr/utils/imageProcessing'

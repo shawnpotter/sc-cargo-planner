@@ -11,6 +11,7 @@ interface SignUpFormProps {
 		name: string
 	}) => void
 	readonly onCancel: () => void
+	readonly disabled?: boolean
 }
 
 /**
@@ -27,7 +28,7 @@ interface SignUpFormProps {
  *
  * @returns {JSX.Element} The rendered sign-up form component.
  */
-function SignUpForm({ onSubmit, onCancel }: SignUpFormProps) {
+function SignUpForm({ onSubmit, onCancel, disabled = false }: SignUpFormProps) {
 	const [email, setEmail] = useState('')
 	const [password, setPassword] = useState('')
 	const [name, setName] = useState('')
@@ -39,7 +40,7 @@ function SignUpForm({ onSubmit, onCancel }: SignUpFormProps) {
 	const handleSubmit = async (e: React.FormEvent) => {
 		e.preventDefault()
 
-		if (loading || isSubmitting) return // Prevent duplicate submissions
+		if (disabled || loading || isSubmitting) return // Prevent duplicate submissions
 		isSubmitting = true // Set the local flag
 
 		const requestId = `${Date.now()}-${Math.random()}` // Generate a unique ID using timestamp and random number
@@ -83,6 +84,12 @@ function SignUpForm({ onSubmit, onCancel }: SignUpFormProps) {
 				<span></span>
 			</div>
 
+			{disabled && (
+				<div className='text-sm text-muted-foreground'>
+					Account creation is disabled in this beta build.
+				</div>
+			)}
+
 			{error && <div>{error}</div>}
 
 			<form onSubmit={handleSubmit}>
@@ -96,6 +103,7 @@ function SignUpForm({ onSubmit, onCancel }: SignUpFormProps) {
 							onChange={(e) => setName(e.target.value)}
 							placeholder='Choose a unique username'
 							required
+							disabled={disabled}
 						/>
 					</div>
 				</div>
@@ -109,6 +117,7 @@ function SignUpForm({ onSubmit, onCancel }: SignUpFormProps) {
 							onChange={(e) => setEmail(e.target.value)}
 							placeholder='Enter your email'
 							required
+							disabled={disabled}
 						/>
 					</div>
 				</div>
@@ -122,6 +131,7 @@ function SignUpForm({ onSubmit, onCancel }: SignUpFormProps) {
 							onChange={(e) => setPassword(e.target.value)}
 							placeholder='Enter your password'
 							required
+							disabled={disabled}
 						/>
 					</div>
 				</div>
@@ -130,7 +140,7 @@ function SignUpForm({ onSubmit, onCancel }: SignUpFormProps) {
 					<Button
 						type='submit'
 						variant='default'
-						disabled={loading}
+						disabled={disabled || loading}
 					>
 						{loading ? 'Authenticating...' : 'Create Account'}
 					</Button>

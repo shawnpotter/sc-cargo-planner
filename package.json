@@ -1,15 +1,18 @@
 {
 	"name": "sc-cargo-planner",
-	"version": "0.1.0",
+	"version": "0.2.0",
 	"private": true,
 	"scripts": {
-		"dev": "next dev --turbopack",
+		"dev": "next dev --hostname 0.0.0.0 --turbopack",
 		"build": "next build --turbopack",
 		"start": "next start",
 		"lint": "eslint",
 		"test": "vitest",
 		"test:run": "vitest --run",
 		"test:watch": "vitest --watch",
+		"test:ocr": "vitest run __tests__/ocr/scanner",
+		"test:ocr:debug": "vitest run __tests__/ocr/debug-images --reporter=verbose",
+		"test:ocr:watch": "vitest watch __tests__/ocr",
 		"prisma:migrate": "set DOTENV_CONFIG_PATH=.env.local && npx prisma migrate"
 	},
 	"dependencies": {
@@ -60,6 +63,7 @@
 		"@types/react-dom": "^19",
 		"@vitejs/plugin-react": "^4.7.0",
 		"@vitest/ui": "^3.2.4",
+		"canvas": "^3.2.0",
 		"eslint": "^9",
 		"eslint-config-next": "15.5.3",
 		"jsdom": "^27.0.0",

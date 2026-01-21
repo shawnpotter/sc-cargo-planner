@@ -1,7 +1,13 @@
 // @/providers/ContractContext.tsx
 'use client'
 
-import React, { createContext, useContext, useState, useCallback } from 'react'
+import React, {
+	createContext,
+	useContext,
+	useState,
+	useCallback,
+	useMemo,
+} from 'react'
 import { Contract, DeliveryPoint } from '@/constants/types'
 
 interface ContractProviderType {
@@ -30,7 +36,7 @@ interface ContractProviderType {
 }
 
 const ContractContext = createContext<ContractProviderType | undefined>(
-	undefined
+	undefined,
 )
 
 /**
@@ -79,7 +85,7 @@ function ContractProvider({
 
 	const generateId = useCallback(
 		() => `id-${Date.now()}-${Math.random().toString(36).substring(2, 11)}`,
-		[]
+		[],
 	)
 
 	const addContract = useCallback(
@@ -89,18 +95,21 @@ function ContractProvider({
 				id: contract.id || generateId(),
 			}
 			setContracts((prev) => [...prev, newContract])
-			return newContract.id!
+			if (!newContract.id) {
+				throw new Error('Failed to generate contract ID')
+			}
+			return newContract.id
 		},
-		[generateId]
+		[generateId],
 	)
 
 	const updateContract = useCallback(
 		(id: string, updates: Partial<Contract>) => {
 			setContracts((prev) =>
-				prev.map((c) => (c.id === id ? { ...c, ...updates } : c))
+				prev.map((c) => (c.id === id ? { ...c, ...updates } : c)),
 			)
 		},
-		[]
+		[],
 	)
 
 	const removeContract = useCallback((id: string) => {
@@ -110,6 +119,7 @@ function ContractProvider({
 	const clearContracts = useCallback(() => {
 		setContracts([])
 		resetCurrentContract()
+		// eslint-disable-next-line react-hooks/exhaustive-deps
 	}, [])
 
 	const resetCurrentContract = useCallback(() => {
@@ -140,7 +150,7 @@ function ContractProvider({
 				}
 			})
 		},
-		[generateId]
+		[generateId],
 	)
 
 	const removeDeliveryPoint = useCallback((index: number) => {
@@ -180,7 +190,7 @@ function ContractProvider({
 			}))
 			setContracts(contractsWithIds)
 		},
-		[generateId]
+		[generateId],
 	)
 
 	const addOCRContracts = useCallback(
@@ -192,25 +202,43 @@ function ContractProvider({
 
 			setContracts((prev) => [...prev, ...contractsWithIds])
 		},
-		[generateId]
+		[generateId],
 	)
 
-	const value: ContractProviderType = {
-		contracts,
-		currentContract,
-		addContract,
-		updateContract,
-		removeContract,
-		clearContracts,
-		setCurrentContract,
-		updateCurrentContract,
-		saveCurrentContract,
-		resetCurrentContract,
-		addDeliveryPoint,
-		removeDeliveryPoint,
-		importContracts,
-		addOCRContracts,
-	}
+	const value = useMemo<ContractProviderType>(
+		() => ({
+			contracts,
+			currentContract,
+			addContract,
+			updateContract,
+			removeContract,
+			clearContracts,
+			setCurrentContract,
+			updateCurrentContract,
+			saveCurrentContract,
+			resetCurrentContract,
+			addDeliveryPoint,
+			removeDeliveryPoint,
+			importContracts,
+			addOCRContracts,
+		}),
+		[
+			contracts,
+			currentContract,
+			addContract,
+			updateContract,
+			removeContract,
+			clearContracts,
+			setCurrentContract,
+			updateCurrentContract,
+			saveCurrentContract,
+			resetCurrentContract,
+			addDeliveryPoint,
+			removeDeliveryPoint,
+			importContracts,
+			addOCRContracts,
+		],
+	)
 
 	return (
 		<ContractContext.Provider value={value}>

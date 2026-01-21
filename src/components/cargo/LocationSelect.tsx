@@ -17,7 +17,7 @@ import {
 // Returns an array of [groupLabel, locations[]] sorted by groupLabel.
 const groupAndFilterLocations = (
 	locs: ReturnType<typeof getSelectableLocations>,
-	query: string
+	query: string,
 ) => {
 	const q = query.trim().toLowerCase()
 
@@ -27,7 +27,7 @@ const groupAndFilterLocations = (
 				const parent = (l.parentObject || '').toString().toLowerCase()
 				const type = (l.type || '').toString().toLowerCase()
 				return name.includes(q) || parent.includes(q) || type.includes(q)
-		  })
+			})
 		: locs.slice()
 
 	// Build a lookup of all locations (including non-selectable) so we can
@@ -98,7 +98,7 @@ const groupAndFilterLocations = (
 	for (const g of groups) {
 		g.direct.sort((x, y) => String(x.name).localeCompare(String(y.name)))
 		g.moons.sort((a, b) =>
-			(a.moon?.name || '').localeCompare(b.moon?.name || '')
+			(a.moon?.name || '').localeCompare(b.moon?.name || ''),
 		)
 		for (const m of g.moons) {
 			m.children.sort((x, y) => String(x.name).localeCompare(String(y.name)))
@@ -139,7 +139,7 @@ function LocationSelect({
 
 	const groups = useMemo(
 		() => groupAndFilterLocations(getSelectableLocations(), query),
-		[query]
+		[query],
 	)
 
 	return (
@@ -147,7 +147,7 @@ function LocationSelect({
 			value={value}
 			onValueChange={onValueChange}
 		>
-			<SelectTrigger>
+			<SelectTrigger className='!dark:bg-accent-foreground bg-accent'>
 				<SelectValue placeholder={placeholder} />
 			</SelectTrigger>
 

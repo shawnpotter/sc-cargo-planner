@@ -37,6 +37,7 @@ export interface Contract {
 	origin: string
 	deliveryPoints: DeliveryPoint[]
 	payout?: number
+	contractType?: 'delivery' | 'pickup'
 }
 
 export interface Container {

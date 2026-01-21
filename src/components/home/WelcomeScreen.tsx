@@ -22,16 +22,25 @@ interface WelcomeScreenProps {
  * @returns {JSX.Element} The rendered welcome screen UI.
  */
 function WelcomeScreen({ onContinue }: WelcomeScreenProps) {
+	const authDisabled = true
 	const [showSignIn, setShowSignIn] = useState(false)
 	const [showSignUp, setShowSignUp] = useState(false)
 	const [error, setError] = useState('')
 
 	const handleSignIn = () => {
+		if (authDisabled) {
+			setError('Account features are disabled in this beta build')
+			return
+		}
 		setShowSignIn(true)
 		setShowSignUp(false)
 	}
 
 	const handleSignUp = () => {
+		if (authDisabled) {
+			setError('Account features are disabled in this beta build')
+			return
+		}
 		setShowSignUp(true)
 		setShowSignIn(false)
 	}
@@ -40,6 +49,10 @@ function WelcomeScreen({ onContinue }: WelcomeScreenProps) {
 		name: string
 		password: string
 	}) => {
+		if (authDisabled) {
+			setError('Account features are disabled in this beta build')
+			return
+		}
 		setError('')
 		try {
 			const result = await signIn('credentials', {
@@ -73,17 +86,20 @@ function WelcomeScreen({ onContinue }: WelcomeScreenProps) {
 		<SignInForm
 			onSubmit={handleSignInSubmit}
 			onCancel={handleCancel}
+			disabled={authDisabled}
 		/>
 	) : showSignUp ? (
 		<SignUpForm
 			onSubmit={() => {}}
 			onCancel={handleCancel}
+			disabled={authDisabled}
 		/>
 	) : (
 		<AuthOptions
 			onSignIn={handleSignIn}
 			onSignUp={handleSignUp}
 			onContinueAsGuest={handleContinueAsGuest}
+			authDisabled={authDisabled}
 		/>
 	)
 
@@ -91,13 +107,13 @@ function WelcomeScreen({ onContinue }: WelcomeScreenProps) {
 		<div className='min-h-screen flex flex-col items-center justify-center bg-background px-4 py-8'>
 			<div className='w-full max-w-xl flex flex-col items-center gap-8'>
 				<div className='text-center'>
-					<h1 className='text-3xl md:text-4xl font-bold font-sans tracking-wider uppercase text-[#FF8A00] dark:text-[#FF8A00] drop-shadow-[0_0_8px_rgba(255,138,0,0.4)] mb-2'>
+					<h1 className='text-3xl md:text-4xl font-bold font-sans tracking-wider uppercase text-primary mb-2'>
 						UNIVERSAL CARGO MANAGEMENT SYSTEM
 					</h1>
 					<div className='text-foreground text-base md:text-lg font-sans mb-1'>
 						Welcome to the UEE approved cargo management terminal
 					</div>
-					<div className='text-xs text-foreground tracking-wider border-b border-dashed border-[#FF8A00] dark:border-[#FF8A00] pb-1'>
+					<div className='text-xs text-foreground tracking-wider border-b border-dashed border-primary dark:border-primary pb-1'>
 						UCMS v0.1 // SECURE TRANSMISSION
 					</div>
 				</div>

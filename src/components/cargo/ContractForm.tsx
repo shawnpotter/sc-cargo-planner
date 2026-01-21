@@ -1,8 +1,6 @@
-// @/components/cargo/ContractForm.tsx
-import React, { useState } from 'react'
-import { Contract, DeliveryPoint } from '@/constants/types'
-import { useContracts } from '@/providers/ContractProvider'
-import { useContractAPI } from '@/hooks/useContractAPI'
+import React from 'react'
+import { useContractForm } from '@/components/cargo/hooks/useContractForm'
+import { useAlertDialog } from '@/components/cargo/hooks/useAlertDialog'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import {
@@ -25,28 +23,14 @@ import {
 	AlertDialogAction,
 } from '@/components/ui/alert-dialog'
 import { LocationSelect } from '@/components/cargo/LocationSelect'
-
-interface CargoEntry {
-	id?: string
-	cargoType: string
-	quantity: number
-}
-
-// Local alias to represent cargo items that may or may not have an `id`.
-// Matches both locally-created CargoEntry (which includes optional id)
-// and the shape coming from `DeliveryPoint.cargo` in the shared types.
-type CargoItem = {
-	id?: string
-	cargoType: string
-	quantity: number
-}
-
-interface DeliveryPointExtended extends DeliveryPoint {
-	cargo: CargoEntry[]
-}
+import { RouteTypeToggle } from '@/components/cargo/RouteTypeToggle'
+import { CurrentContractSection } from '@/components/cargo/components/CurrentContractSection'
+import { ContractList } from '@/components/cargo/components/ContractList'
+import { isScannerAvailable } from '@/components/cargo/utils/contractValidation'
+import { Contract } from '@/constants/types'
 
 interface ContractFormProps {
-	readonly onSubmit: (contracts: Contract[]) => void
+	readonly onSubmit: (contracts: Contract[], endLocation?: string) => void
 	readonly onReset: () => void
 	readonly haulingMode: HaulingMode
 }
@@ -57,103 +41,71 @@ interface ContractFormProps {
  * Allows users to configure contract details, add delivery points with cargo items,
  * review current and saved contracts, and submit or reset the contract list.
  * Supports scanning contracts (desktop only) and displays alerts for validation.
+ * Includes route type selection (closed loop vs open path).
  *
- * @param onSubmit - Callback invoked with the list of contracts when the form is submitted.
+ * @param onSubmit - Callback invoked with the list of contracts and optional end location when the form is submitted.
  * @param onReset - Callback invoked when the form is reset.
  * @param haulingMode - The current hauling mode, determines contract payout visibility and scanner availability.
- *
- * @remarks
- * - Uses context hooks for contract state management.
- * - Integrates with an API for contract saving.
- * - UI adapts for desktop and mobile environments.
  */
 function ContractForm({ onSubmit, onReset, haulingMode }: ContractFormProps) {
 	const {
 		contracts,
 		currentContract,
+		newDelivery,
+		showScanner,
+		apiLoading,
+		routeType,
+		endLocation,
 		updateCurrentContract,
-		addDeliveryPoint,
-		removeDeliveryPoint,
-		saveCurrentContract,
-		removeContract,
-		clearContracts,
-	} = useContracts()
+		setNewDelivery,
+		setShowScanner,
+		handleAddDeliveryPoint,
+		handleAddCargoToDelivery,
+		handleRemoveCargoFromDelivery,
+		handleSaveCurrentContract,
+		handleRemoveContract,
+		handleRemoveDeliveryPoint,
+		handleSubmit,
+		handleReset,
+		setRouteType,
+		setEndLocation,
+	} = useContractForm(onSubmit, onReset)
 
-	const { saveContracts, loading: apiLoading } = useContractAPI()
+	const {
+		isOpen: alertOpen,
+		title: alertTitle,
+		description: alertDescription,
+		showAlert,
+		closeAlert,
+	} = useAlertDialog()
 
-	const [showScanner, setShowScanner] = useState(false)
-	const [alertOpen, setAlertOpen] = useState(false)
-	const [alertTitle, setAlertTitle] = useState('')
-	const [alertDescription, setAlertDescription] = useState('')
-	const [newDelivery, setNewDelivery] = useState<DeliveryPointExtended>({
-		location: '',
-		cargo: [],
-		quantity: 0,
-	})
-
-	const generateId = () => `id-${Math.random().toString(36).substring(2, 11)}`
-
-	const handleAddDeliveryPoint = () => {
-		if (newDelivery.location && newDelivery.cargo.length > 0) {
-			const deliveryPoint: DeliveryPoint = {
-				id: generateId(),
-				location: newDelivery.location,
-				quantity: newDelivery.cargo.reduce(
-					(acc, curr) => acc + curr.quantity,
-					0
-				),
-				cargo: newDelivery.cargo,
-			}
-
-			addDeliveryPoint(deliveryPoint)
-			setNewDelivery({ location: '', cargo: [], quantity: 0 })
-		}
-	}
-
-	const removeCargoFromDelivery = (cargoIndex: number) => {
-		setNewDelivery((prev) => ({
-			...prev,
-			cargo: prev.cargo.filter((_, i) => i !== cargoIndex),
-		}))
-	}
-
-	const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
+	const onSubmitForm = async (e: React.FormEvent<HTMLFormElement>) => {
 		e.preventDefault()
-
-		// Save current contract if it has content
-		if (currentContract.origin && currentContract.deliveryPoints?.length) {
-			saveCurrentContract()
+		const result = await handleSubmit()
+		if (!result.success && result.error) {
+			showAlert(result.error.title, result.error.description)
 		}
+	}
 
-		if (contracts.length === 0) {
-			setAlertTitle('No valid contracts')
-			setAlertDescription('Please add at least one valid contract')
-			setAlertOpen(true)
+	const handleScannerClick = (e: React.MouseEvent) => {
+		e.preventDefault()
+		const { available, reason } = isScannerAvailable()
+
+		if (!available && reason) {
+			showAlert('Scanner not available', reason)
 			return
 		}
 
-		// Optionally save to API
-		if (saveContracts) {
-			await saveContracts(contracts)
-		}
-
-		onSubmit(contracts)
-	}
-
-	const handleReset = () => {
-		clearContracts()
-		setNewDelivery({ location: '', cargo: [], quantity: 0 })
-		onReset()
+		setShowScanner(true)
 	}
 
 	return (
-		<div className='grid gap-2 overflow-y-auto max-h-[40em] pb-20'>
+		<div className='grid gap-2 pb-2'>
 			{showScanner && <Scanner onClose={() => setShowScanner(false)} />}
 
-			{/* Alert dialog replacement for native alert() */}
 			<AlertDialog
 				open={alertOpen}
-				onOpenChange={(open) => setAlertOpen(open)}
+				onOpenChange={closeAlert}
 			>
 				{alertOpen && (
 					<AlertDialogContent>
@@ -164,31 +116,31 @@ function ContractForm({ onSubmit, onReset, haulingMode }: ContractFormProps) {
 							</AlertDialogDescription>
 						</AlertDialogHeader>
 						<AlertDialogFooter>
-							<AlertDialogAction onClick={() => setAlertOpen(false)}>
-								OK
-							</AlertDialogAction>
+							<AlertDialogAction onClick={closeAlert}>OK</AlertDialogAction>
 						</AlertDialogFooter>
 					</AlertDialogContent>
 				)}
 			</AlertDialog>
 
 			<form
-				onSubmit={handleSubmit}
+				onSubmit={onSubmitForm}
 				className='grid grid-cols-1 md:grid-cols-2 gap-6 max-w-4xl mx-auto w-full overflow-y-auto'
 			>
-				{/* LEFT COLUMN: main form sections + contract review */}
+				{/* LEFT COLUMN */}
 				<div className='md:col-span-1 flex flex-col gap-6'>
 					{/* Basic Configuration */}
-					<div className='bg-card border border-border p-4 rounded shadow-sm flex flex-col gap-4'>
+					<div className='bg-card border border-primary p-4 rounded shadow-sm flex flex-col gap-4'>
 						<div>
 							<label htmlFor='maxContainerSize'>Max Container Size (SCU)</label>
 							<Select
 								value={currentContract.maxContainerSize?.toString() || ''}
 								onValueChange={(value) =>
-									updateCurrentContract({ maxContainerSize: parseInt(value) })
+									updateCurrentContract({
+										maxContainerSize: Number.parseInt(value),
+									})
 								}
 							>
-								<SelectTrigger>
+								<SelectTrigger className='!dark:bg-accent-foreground bg-accent text-foreground w-full'>
 									<SelectValue placeholder='Select size' />
 								</SelectTrigger>
 								<SelectContent>
@@ -211,10 +163,11 @@ function ContractForm({ onSubmit, onReset, haulingMode }: ContractFormProps) {
 									<Input
 										type='number'
 										id='payout'
+										className='!dark:bg-accent-foreground bg-accent'
 										value={currentContract.payout?.toString() ?? ''}
 										onChange={(e) =>
 											updateCurrentContract({
-												payout: parseInt(e.target.value) || 0,
+												payout: Number.parseInt(e.target.value) || 0,
 											})
 										}
 										placeholder='Contract Payout'
@@ -235,192 +188,63 @@ function ContractForm({ onSubmit, onReset, haulingMode }: ContractFormProps) {
 						</div>
 					</div>
 
+					{/* Route Type Configuration */}
+					<div className='bg-card border border-primary p-4 rounded shadow-sm'>
+						<RouteTypeToggle
+							currentType={routeType}
+							endLocation={endLocation}
+							onTypeChange={setRouteType}
+							onEndLocationChange={setEndLocation}
+						/>
+					</div>
+
 					{/* Delivery Points */}
 					<DeliveryPointEditor
 						value={newDelivery}
 						onChange={(next) => setNewDelivery(next)}
-						onAddDelivery={() => handleAddDeliveryPoint()}
-						onAddCargo={(cargo) =>
-							setNewDelivery((prev) => ({
-								...prev,
-								cargo: [...prev.cargo, cargo],
-							}))
-						}
-						onRemoveCargo={(index) => removeCargoFromDelivery(index)}
+						onAddDelivery={handleAddDeliveryPoint}
+						onAddCargo={handleAddCargoToDelivery}
+						onRemoveCargo={(index) => handleRemoveCargoFromDelivery(index)}
 					/>
-
-					{/* end left column */}
 				</div>
 
-				{/* RIGHT COLUMN: Saved Contracts (desktop) / stacked on mobile */}
+				{/* RIGHT COLUMN */}
 				<div className='md:col-span-1 space-y-3'>
-					{/* Contract Review (moved to right column) */}
-					<div className='bg-card p-4 rounded shadow-sm flex flex-col gap-4'>
-						{haulingMode === HaulingMode.CONTRACT && (
-							<div className='flex flex-col items-center gap-3 mb-2'>
+					{/* Scanner Button */}
+					{haulingMode === HaulingMode.CONTRACT && (
+						<div className='bg-card border border-primary p-4 rounded shadow-sm'>
+							<div className='flex flex-col items-center gap-3'>
 								<Button
-									onClick={(e) => {
-										e.preventDefault()
-										try {
-											const isMobile =
-												typeof navigator !== 'undefined' &&
-												/Mobi|Android|iPhone|iPad|iPod/i.test(
-													navigator.userAgent
-												)
-											if (isMobile) {
-												setAlertTitle('Scanner not available on mobile')
-												setAlertDescription(
-													'This functionality is only available on desktop'
-												)
-												setAlertOpen(true)
-												return
-											}
-											setShowScanner(true)
-										} catch {
-											// fallback: open scanner
-											setShowScanner(true)
-										}
-									}}
+									onClick={handleScannerClick}
 									variant='default'
 								>
 									📸 Scan Contract
 								</Button>
 							</div>
-						)}
-
-						{/* Current Contract Display */}
-						{currentContract.deliveryPoints &&
-							currentContract.deliveryPoints.length > 0 && (
-								<div className='bg-card p-3 rounded'>
-									<h2 className='text-lg font-semibold mb-1'>
-										Current Contract
-									</h2>
-									<div className='text-sm mb-3'>
-										Origin: {currentContract.origin}
-									</div>
-									{currentContract.deliveryPoints.map((point, index) => (
-										<div
-											key={point.id}
-											className='bg-gray-700 p-2 rounded mb-2'
-										>
-											<div className='flex justify-between items-center'>
-												<h3 className='text-base font-medium'>
-													{point.location}
-												</h3>
-												<button
-													onClick={(e) => {
-														e.preventDefault()
-														removeDeliveryPoint(index)
-													}}
-													className='text-red-400 text-xs'
-												>
-													Remove
-												</button>
-											</div>
-											<ul className='text-sm ml-2 mt-1'>
-												{point.cargo?.map((cargo: CargoItem) => (
-													<li
-														key={
-															cargo.id ?? `${cargo.cargoType}-${cargo.quantity}`
-														}
-													>
-														{cargo.cargoType}: {cargo.quantity} SCU
-													</li>
-												))}
-											</ul>
-										</div>
-									))}
-									<div className='mt-2'>
-										<Button
-											onClick={(e) => {
-												e.preventDefault()
-												saveCurrentContract()
-											}}
-											variant='default'
-										>
-											Save Contract
-										</Button>
-									</div>
-								</div>
-							)}
-					</div>
-					{contracts.length > 0 && (
-						<div className='bg-card p-3 rounded overflow-auto'>
-							<h2 className='text-lg font-semibold mb-2'>
-								Saved Contracts ({contracts.length})
-							</h2>
-							<div className='space-y-3'>
-								{contracts.map((contract) => (
-									<div
-										key={contract.id}
-										className='bg-gray-700 p-2 rounded'
-									>
-										<div className='flex justify-between items-center'>
-											<h3 className='text-base font-medium'>
-												{contract.origin}
-											</h3>
-											<button
-												onClick={(e) => {
-													e.preventDefault()
-													removeContract(contract.id!)
-												}}
-												className='text-red-400 text-xs'
-											>
-												Remove
-											</button>
-										</div>
-										<div className='text-sm mt-1'>
-											<span className='opacity-70'>Max Container: </span>
-											<span>{contract.maxContainerSize} SCU</span>
-											{haulingMode === HaulingMode.CONTRACT &&
-												contract.payout && (
-													<>
-														<span className='ml-3 opacity-70'>Payout: </span>
-														<span>{contract.payout.toLocaleString()} aUEC</span>
-													</>
-												)}
-										</div>
-										<details className='text-sm mt-2'>
-											<summary className='cursor-pointer'>
-												{contract.deliveryPoints.length} delivery points
-											</summary>
-											<div className='mt-2 ml-2'>
-												{contract.deliveryPoints.map((point) => (
-													<div
-														key={point.id}
-														className='mb-2'
-													>
-														<div className='font-medium'>{point.location}</div>
-														<ul className='ml-2 opacity-80'>
-															{point.cargo.map((cargo: CargoItem) => (
-																<li
-																	key={
-																		cargo.id ??
-																		`${cargo.cargoType}-${cargo.quantity}`
-																	}
-																>
-																	{cargo.cargoType}: {cargo.quantity} SCU
-																</li>
-															))}
-														</ul>
-													</div>
-												))}
-											</div>
-										</details>
-									</div>
-								))}
-							</div>
 						</div>
 					)}
+
+					{/* Current Contract */}
+					<CurrentContractSection
+						currentContract={currentContract}
+						onRemoveDeliveryPoint={handleRemoveDeliveryPoint}
+						onSaveContract={handleSaveCurrentContract}
+					/>
+
+					{/* Saved Contracts */}
+					<ContractList
+						contracts={contracts}
+						haulingMode={haulingMode}
+						onRemoveContract={handleRemoveContract}
+					/>
 				</div>
 
+				{/* Submit Buttons */}
 				<div className='md:col-span-2 flex justify-center gap-4 mt-6'>
 					<Button
-						onClick={(e) => {
-							e.preventDefault()
-							handleSubmit(e as unknown as React.FormEvent<HTMLFormElement>)
-						}}
+						type='submit'
 						variant='default'
+						className='!bg-primary'
 						disabled={
 							apiLoading ||
 							(contracts.length === 0 &&

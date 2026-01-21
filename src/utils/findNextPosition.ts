@@ -52,7 +52,7 @@ const createEmptyGrid = (length: number, width: number): GridCell[][] => {
 		.map(() =>
 			Array(width)
 				.fill(null)
-				.map(() => ({ occupied: false, height: 0 }))
+				.map(() => ({ occupied: false, height: 0 })),
 		)
 }
 
@@ -79,7 +79,7 @@ const initializeGridsWithMeta = (ship: Ship): GridWithMeta[] => {
  */
 const markOccupiedSpaces = (
 	gridsWithMeta: GridWithMeta[],
-	containers: Container[]
+	containers: Container[],
 ) => {
 	containers.forEach((container) => {
 		const [containerWidth, containerHeight, containerDepth] =
@@ -117,7 +117,7 @@ const markOccupiedSpaces = (
  */
 const canFitInGrid = (
 	dimensions: ContainerDimensions,
-	cargoGrid: CargoGrid
+	cargoGrid: CargoGrid,
 ): boolean => {
 	return (
 		dimensions.width <= cargoGrid.width &&
@@ -134,6 +134,7 @@ const canFitInGrid = (
  * @param {number} y - The y-coordinate of the position.
  * @param {number} z - The z-coordinate of the position.
  * @param {ContainerDimensions} dimensions - The dimensions of the container.
+ * @param {CargoGrid} cargoGrid - The cargo grid for bounds checking.
  * @returns {boolean} - True if the container can be placed, otherwise false.
  */
 const tryPlacementAtPosition = (
@@ -141,8 +142,18 @@ const tryPlacementAtPosition = (
 	x: number,
 	y: number,
 	z: number,
-	dimensions: ContainerDimensions
+	dimensions: ContainerDimensions,
+	cargoGrid: CargoGrid,
 ): boolean => {
+	// Check bounds first
+	if (
+		x + dimensions.width > cargoGrid.width ||
+		y + dimensions.height > cargoGrid.height ||
+		z + dimensions.depth > cargoGrid.length
+	) {
+		return false
+	}
+
 	// Check if area is clear
 	for (let dz = 0; dz < dimensions.depth; dz++) {
 		for (let dx = 0; dx < dimensions.width; dx++) {
@@ -178,33 +189,48 @@ const tryPlacementAtPosition = (
 
 /**
  * Finds a placement for the container in the grid.
+ * Tries both normal and rotated orientations at each position (Tetris-style).
  *
  * @param {GridCell[][]} grid - The grid.
  * @param {CargoGrid} cargoGrid - The cargo grid.
- * @param {ContainerDimensions} dimensions - The dimensions of the container.
- * @param {boolean} rotated - Whether the container is rotated.
+ * @param {ContainerDimensions} normalDimensions - The normal dimensions of the container.
+ * @param {ContainerDimensions} rotatedDimensions - The rotated dimensions of the container.
  * @param {number} gridIndex - The index of the grid.
  * @returns {PlacementResult | null} - The placement result or null if no placement is found.
  */
 const findPlacementInGrid = (
 	grid: GridCell[][],
 	cargoGrid: CargoGrid,
-	dimensions: ContainerDimensions,
-	rotated: boolean,
-	gridIndex: number
+	normalDimensions: ContainerDimensions,
+	rotatedDimensions: ContainerDimensions,
+	gridIndex: number,
 ): PlacementResult | null => {
-	if (!canFitInGrid(dimensions, cargoGrid)) {
-		return null
-	}
-
-	// Search from top to bottom for each position
-	for (let y = cargoGrid.height - dimensions.height; y >= 0; y--) {
-		for (let z = 0; z < cargoGrid.length - dimensions.depth + 1; z++) {
-			for (let x = 0; x < cargoGrid.width - dimensions.width + 1; x++) {
-				if (tryPlacementAtPosition(grid, x, y, z, dimensions)) {
+	// Search FILO (back to front), left to right, bottom to top
+	// At each position, try both orientations (Tetris-style packing)
+	for (let z = cargoGrid.length - 1; z >= 0; z--) {
+		// BACK to FRONT (FILO)
+		for (let x = 0; x < cargoGrid.width; x++) {
+			// LEFT to RIGHT
+			for (let y = 0; y < cargoGrid.height; y++) {
+				// BOTTOM to TOP
+				// Try normal orientation first
+				if (
+					tryPlacementAtPosition(grid, x, y, z, normalDimensions, cargoGrid)
+				) {
 					return {
 						position: { x, y, z },
-						rotated,
+						rotated: false,
+						gridIndex,
+					}
+				}
+
+				// Try rotated orientation at same position
+				if (
+					tryPlacementAtPosition(grid, x, y, z, rotatedDimensions, cargoGrid)
+				) {
+					return {
+						position: { x, y, z },
+						rotated: true,
 						gridIndex,
 					}
 				}
@@ -226,14 +252,14 @@ const findPlacementInGrid = (
 export const findNextPosition = (
 	size: number,
 	ship: Ship,
-	existingContainers: Container[]
+	existingContainers: Container[],
 ): PlacementResult | null => {
 	// Check if the size exists in voxelDimensionsMap
 	if (!voxelDimensionsMap[size]) {
 		console.error(
 			`Invalid container size: ${size}. Available sizes: ${Object.keys(
-				voxelDimensionsMap
-			).join(', ')}`
+				voxelDimensionsMap,
+			).join(', ')}`,
 		)
 		return null
 	}
@@ -244,7 +270,6 @@ export const findNextPosition = (
 	for (const { grid, gridIndex } of gridsWithMeta) {
 		const cargoGrid = ship.cargoGrids[gridIndex]
 
-		// Try normal orientation
 		const normalDimensions = {
 			width: originalWidth,
 			height,
@@ -256,23 +281,22 @@ export const findNextPosition = (
 			depth: originalWidth,
 		}
 
-		const normalResult = findPlacementInGrid(
+		// Skip grids where the container can't fit in either orientation
+		if (
+			!canFitInGrid(normalDimensions, cargoGrid) &&
+			!canFitInGrid(rotatedDimensions, cargoGrid)
+		) {
+			continue
+		}
+
+		const result = findPlacementInGrid(
 			grid,
 			cargoGrid,
 			normalDimensions,
-			false,
-			gridIndex
-		)
-		if (normalResult) return normalResult
-
-		const rotatedResult = findPlacementInGrid(
-			grid,
-			cargoGrid,
 			rotatedDimensions,
-			true,
-			gridIndex
+			gridIndex,
 		)
-		if (rotatedResult) return rotatedResult
+		if (result) return result
 	}
 
 	return null

@@ -13,23 +13,26 @@ interface HandleLoadCargoProps {
 	setContainers: (containers: Container[]) => void
 	routeAlgorithm?: RouteAlgorithm
 	haulingMode?: HaulingMode
+	endLocation?: string
 }
+
 /**
  * Loads cargo containers onto a ship based on provided contracts and selected ship configuration.
- * Optimizes the delivery route and distributes cargo into containers according to the specified hauling mode and route algorithm.
+ * Uses global route optimization and FILO loading order for optimal container placement.
  *
  * @param contracts - Array of contract objects, each containing delivery points and cargo details.
  * @param selectedShip - The ship object onto which containers will be loaded.
  * @param setContainers - State setter function to update the list of loaded containers.
- * @param routeAlgorithm - (Optional) Algorithm used to optimize delivery routes. Defaults to `RouteAlgorithm.NEAREST_NEIGHBOR`.
- * @param haulingMode - (Optional) Mode determining how cargo is hauled (e.g., by contract or other criteria). Defaults to `HaulingMode.CONTRACT`.
+ * @param routeAlgorithm - Algorithm used to optimize delivery routes. Defaults to NEAREST_NEIGHBOR.
+ * @param haulingMode - Mode determining how cargo is hauled. Defaults to HaulingMode.CONTRACT.
+ * @param endLocation - Optional end location for open path routes. If not specified, route returns to origin (closed loop).
  *
  * @remarks
  * - Clears existing containers before loading new ones.
- * - Uses route optimization to determine the order of deliveries.
- * - Attempts to fit cargo into containers based on optimal sizing and ship capacity.
+ * - Uses global route optimization to determine a single optimal route for all contracts.
+ * - Supports both closed loop (return to origin) and open path (end at specified location) routes.
+ * - Loads containers in FILO order (first loaded = last delivered) for efficient unloading.
  * - Logs a warning if cargo cannot be fully loaded due to space constraints.
- * - Updates the container state with the newly loaded containers.
  */
 export const handleLoadCargo = ({
 	contracts,
@@ -37,70 +40,68 @@ export const handleLoadCargo = ({
 	setContainers,
 	routeAlgorithm = RouteAlgorithm.NEAREST_NEIGHBOR,
 	haulingMode = HaulingMode.CONTRACT,
+	endLocation,
 }: HandleLoadCargoProps) => {
-	// reset container state
+	// Reset container state
 	setContainers([])
 
-	// accumulator for placed containers
+	if (contracts.length === 0) {
+		return
+	}
+
+	// Get optimized route with FILO loading order
+	const optimizedRoute = optimizeRoute(contracts, {
+		algorithm: routeAlgorithm,
+		endLocation,
+	})
+
+	// Accumulator for placed containers
 	const newContainers: Container[] = []
 
-	// get optimized routes
-	const optimizedRoutes = optimizeRoute(contracts, routeAlgorithm)
+	// Load cargo according to FILO order (first loaded = last delivered)
+	optimizedRoute.loadingOrder.forEach((loadStop) => {
+		loadStop.cargo.forEach((cargoItem) => {
+			const contract = contracts[cargoItem.contractIndex]
+			let remainingUnits = cargoItem.quantity
 
-	optimizedRoutes.forEach((route, contractIndex) => {
-		route.forEach((destination) => {
-			const contract = contracts[contractIndex]
-			const deliveryPoint = contract.deliveryPoints.find(
-				(dp) => dp.location === destination
-			)
+			while (remainingUnits > 0) {
+				// Pick next container size
+				const containerSize = calculateOptimalContainerSize(
+					contract.maxContainerSize,
+					remainingUnits,
+					haulingMode
+				)
 
-			if (deliveryPoint) {
-				// allocate each cargo type at this delivery point
-				deliveryPoint.cargo.forEach((cargoItem, cargoTypeIndex) => {
-					let remainingUnits = cargoItem.quantity
+				// Find placement on the ship
+				const result = findNextPosition(
+					containerSize,
+					selectedShip,
+					newContainers
+				)
 
-					while (remainingUnits > 0) {
-						// pick next container size
-						const containerSize = calculateOptimalContainerSize(
-							contract.maxContainerSize,
-							remainingUnits,
-							haulingMode
-						)
+				// Stop if no space left
+				if (!result) {
+					console.warn(
+						`Unable to fit remaining ${remainingUnits} units for ` +
+							`Contract ${cargoItem.contractIndex + 1}, ` +
+							`Delivery to ${loadStop.location}, ` +
+							`Cargo: ${cargoItem.cargoType}`
+					)
+					break
+				}
 
-						// find placement on the ship
-						const result = findNextPosition(
-							containerSize,
-							selectedShip,
-							newContainers
-						)
+				// Create container record
+				const newContainer: Container = {
+					size: containerSize,
+					contractIndex: cargoItem.contractIndex,
+					deliveryIndex: cargoItem.deliveryPointIndex,
+					position: result.position,
+					rotated: result.rotated,
+					gridIndex: result.gridIndex,
+				}
 
-						// stop if no space left
-						if (!result) {
-							console.warn(
-								`Unable to fit remaining ${remainingUnits} units for Contract ${
-									contractIndex + 1
-								}, Delivery to ${deliveryPoint.location}, Cargo: ${
-									cargoItem.cargoType
-								}`
-							)
-							break
-						}
-
-						// create container record
-						const newContainer: Container = {
-							size: containerSize,
-							contractIndex,
-							deliveryIndex: contract.deliveryPoints.indexOf(deliveryPoint),
-							position: result.position,
-							rotated: result.rotated,
-							gridIndex: result.gridIndex,
-							cargoTypeIndex,
-						}
-
-						newContainers.push(newContainer)
-						remainingUnits -= containerSize
-					}
-				})
+				newContainers.push(newContainer)
+				remainingUnits -= containerSize
 			}
 		})
 	})

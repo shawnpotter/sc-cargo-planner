@@ -44,40 +44,53 @@
 }
 
 :root {
+	--header-h: theme('spacing.16');
 	--radius: 0.625rem;
-	/* LIGHT sci-fi terminal: pale background with neon accents */
-	/* CRT amber phosphor (light) */
-	--background: #fbf7f0; /* warm off-white */
-	--foreground: #4b2e00; /* dark amber-brown text */
-	--card: #fffdf8; /* card background with warm tint */
-	--card-foreground: #4a2c00;
-	--popover: #fdfaf5;
-	--popover-foreground: #4a2c00;
-	--primary: #b67b2a; /* amber primary */
-	--primary-foreground: #fff8ec;
-	--secondary: #8f6b2a; /* muted amber */
-	--secondary-foreground: #3b2000;
-	--muted: #fbf6f0;
-	--muted-foreground: #966f3e;
-	--accent: #d4aa6a; /* soft amber accent */
-	--accent-foreground: #352100;
-	--destructive: #b75a2a; /* brick amber */
-	--border: rgba(180, 120, 60, 0.08);
-	--input: rgba(180, 120, 60, 0.03);
-	--ring: rgba(180, 120, 60, 0.08);
-	--chart-1: #f0d9b2;
-	--chart-2: #e3c29a;
-	--chart-3: #d9b685;
-	--chart-4: #c89c60;
-	--chart-5: #eedfc6;
-	--sidebar: #fffaf6;
-	--sidebar-foreground: #402800;
-	--sidebar-primary: #c99a5a;
-	--sidebar-primary-foreground: #2f1b00;
-	--sidebar-accent: #d4aa6a;
-	--sidebar-accent-foreground: #2f1b00;
-	--sidebar-border: rgba(180, 120, 60, 0.05);
-	--sidebar-ring: rgba(180, 120, 60, 0.09);
+	/* LIGHT theme: inverted values from `.dark` */
+	--background: #b8e2db;
+	--foreground: #062625;
+
+	--card: #ffffff;
+	--card-foreground: #062625;
+
+	--popover: #ecfffa;
+	--popover-foreground: #062625;
+
+	--primary: #007a6b;
+	--primary-foreground: #f4fffb;
+
+	--secondary: #50caa6;
+	--secondary-foreground: #03302b;
+
+	--muted: #e7fff9;
+	--muted-foreground: #3a7b72;
+
+	--accent: #bfffef;
+	--accent-foreground: #03302b;
+
+	--destructive: #ff5e00;
+
+	--border: rgba(0, 122, 107, 0.18);
+	--input: rgba(0, 122, 107, 0.1);
+	--ring: rgba(0, 122, 107, 0.28);
+
+	--chart-1: #007a6b;
+	--chart-2: #009985;
+	--chart-3: #00b7a1;
+	--chart-4: #27d8bf;
+	--chart-5: #5ef2d9;
+
+	--sidebar: #ecfffa;
+	--sidebar-foreground: #03302b;
+
+	--sidebar-primary: #007a6b;
+	--sidebar-primary-foreground: #f4fffb;
+
+	--sidebar-accent: #bfffef;
+	--sidebar-accent-foreground: #03302b;
+
+	--sidebar-border: rgba(0, 122, 107, 0.14);
+	--sidebar-ring: rgba(0, 122, 107, 0.26);
 
 	/* CRT helpers */
 	--glow-rgb: 120, 200, 130; /* used as rgba(var(--glow-rgb), a) */
@@ -90,38 +103,50 @@
 }
 
 .dark {
-	/* DARK CRT green phosphor */
-	--background: #04120b; /* deep near-black with green bias */
-	--foreground: #9fdc98; /* phosphor green */
-	--card: #062018; /* dark panel */
-	--card-foreground: #bfe9c8;
-	--popover: #051815;
-	--popover-foreground: #bde7c4;
-	--primary: #66c88f; /* muted phosphor */
-	--primary-foreground: #05201a;
-	--secondary: #7fcf9f; /* lighter green */
-	--secondary-foreground: #042018;
-	--muted: #07221c;
-	--muted-foreground: #7bd6a8;
-	--accent: #7fe0b0; /* soft green accent */
-	--accent-foreground: #031711;
-	--destructive: #d0865a; /* desaturated warning */
-	--border: rgba(120, 200, 140, 0.06);
-	--input: rgba(120, 200, 140, 0.03);
-	--ring: rgba(120, 200, 140, 0.1);
-	--chart-1: #bfe9c8;
-	--chart-2: #8fe0b0;
-	--chart-3: #9fdfe0;
-	--chart-4: #cfe6b5;
-	--chart-5: #dff3dd;
-	--sidebar: #041916;
-	--sidebar-foreground: #c9f0d0;
-	--sidebar-primary: #74d39a;
-	--sidebar-primary-foreground: #03140f;
-	--sidebar-accent: #7fe0b0;
-	--sidebar-accent-foreground: #03140f;
-	--sidebar-border: rgba(120, 200, 140, 0.05);
-	--sidebar-ring: rgba(120, 200, 140, 0.11);
+	--background: #020b0c;
+	--foreground: #b8fff1;
+
+	--card: #041a1c;
+	--card-foreground: #86f7e4;
+
+	--popover: #031316;
+	--popover-foreground: #b8fff1;
+
+	--primary: #00ffd1;
+	--primary-foreground: #02110f;
+
+	--secondary: #00bfa1;
+	--secondary-foreground: #02110f;
+
+	--muted: #062425;
+	--muted-foreground: #6fe8d6;
+
+	--accent: #0a3534;
+	--accent-foreground: #a8ffef;
+
+	--destructive: #ff5e00;
+
+	--border: rgba(0, 255, 209, 0.1);
+	--input: rgba(0, 255, 209, 0.06);
+	--ring: rgba(0, 255, 209, 0.22);
+
+	--chart-1: #00ffd1;
+	--chart-2: #00cfaf;
+	--chart-3: #22e7ff;
+	--chart-4: #7cffb2;
+	--chart-5: #b8fff1;
+
+	--sidebar: #031516;
+	--sidebar-foreground: #b8fff1;
+
+	--sidebar-primary: #00ffd1;
+	--sidebar-primary-foreground: #02110f;
+
+	--sidebar-accent: #0a3534;
+	--sidebar-accent-foreground: #a8ffef;
+
+	--sidebar-border: rgba(0, 255, 209, 0.08);
+	--sidebar-ring: rgba(0, 255, 209, 0.2);
 
 	/* CRT helpers */
 	--glow-rgb: 100, 220, 140;
@@ -152,7 +177,8 @@
 		inset: 0;
 		pointer-events: none;
 		z-index: 9999;
-		background-image: var(--dither-pattern),
+		background-image:
+			var(--dither-pattern),
 			repeating-linear-gradient(
 				to bottom,
 				transparent 0px,
@@ -162,7 +188,9 @@
 			);
 		/* first layer = dither tile, second = scanlines */
 		background-repeat: repeat, repeat;
-		background-size: var(--dither-scale) var(--dither-scale), auto;
+		background-size:
+			var(--dither-scale) var(--dither-scale),
+			auto;
 		/* blend dither more subtly, keep scanlines overlay behavior */
 		background-blend-mode: multiply, overlay;
 		opacity: 0.5;
@@ -199,7 +227,413 @@
 
 	/* stronger glow utility for key elements */
 	.crt-glow {
-		text-shadow: 0 0 10px rgba(var(--glow-rgb), 0.14),
+		text-shadow:
+			0 0 10px rgba(var(--glow-rgb), 0.14),
 			0 0 20px rgba(var(--glow-rgb), 0.06);
 	}
+
+	.industrial-border {
+		position: relative;
+		background: rgba(0, 0, 0, 0.1);
+		padding: clamp(20px, 4vw, 40px);
+		margin: clamp(10px, 2vw, 20px);
+	}
+
+	/* Diagonal stripes along edges */
+	.industrial-border::before {
+		content: '';
+		position: absolute;
+		inset: 0;
+		z-index: 1;
+		background-image:
+    /* Top edge stripes */
+			repeating-linear-gradient(
+				45deg,
+				rgba(255, 255, 255, 0.4) 0px,
+				rgba(255, 255, 255, 0.4) 5px,
+				transparent 4px,
+				transparent 12px
+			),
+			/* Right edge stripes */
+				repeating-linear-gradient(
+					45deg,
+					rgba(255, 255, 255, 0.4) 0px,
+					rgba(255, 255, 255, 0.4) 5px,
+					transparent 4px,
+					transparent 12px
+				),
+			/* Bottom edge stripes */
+				repeating-linear-gradient(
+					45deg,
+					rgba(255, 255, 255, 0.4) 0px,
+					rgba(255, 255, 255, 0.4) 5px,
+					transparent 4px,
+					transparent 12px
+				),
+			/* Left edge stripes */
+				repeating-linear-gradient(
+					45deg,
+					rgba(255, 255, 255, 0.4) 0px,
+					rgba(255, 255, 255, 0.4) 5px,
+					transparent 4px,
+					transparent 12px
+				);
+		background-size:
+			clamp(10em, 15vw, 120px) clamp(0.3em, 1.5vw, 12px),
+			clamp(0.3em, 1.5vw, 12px) clamp(10em, 15vw, 120px),
+			clamp(10em, 15vw, 120px) clamp(0.3em, 1.5vw, 12px),
+			clamp(0.3em, 1.5vw, 12px) clamp(10em, 15vw, 120px);
+		background-position:
+			center 0,
+			100% center,
+			center 100%,
+			0 center;
+		background-repeat: no-repeat;
+		pointer-events: none;
+	}
+}
+
+@utility beveled-tl-sm {
+	clip-path: polygon(0.25rem 0, 100% 0, 100% 100%, 0 100%, 0 0.25rem);
+}
+@utility beveled-tl {
+	clip-path: polygon(0.5rem 0, 100% 0, 100% 100%, 0 100%, 0 0.5rem);
+}
+@utility beveled-tl-lg {
+	clip-path: polygon(1rem 0, 100% 0, 100% 100%, 0 100%, 0 1rem);
+}
+@utility beveled-tl-xl {
+	clip-path: polygon(1.5rem 0, 100% 0, 100% 100%, 0 100%, 0 1.5rem);
+}
+@utility beveled-tl-2xl {
+	clip-path: polygon(2rem 0, 100% 0, 100% 100%, 0 100%, 0 2rem);
+}
+
+@utility beveled-tr-sm {
+	clip-path: polygon(
+		0 0,
+		calc(100% - 0.25rem) 0,
+		100% 0.25rem,
+		100% 100%,
+		0 100%
+	);
+}
+@utility beveled-tr {
+	clip-path: polygon(
+		0 0,
+		calc(100% - 0.5rem) 0,
+		100% 0.5rem,
+		100% 100%,
+		0 100%
+	);
+}
+@utility beveled-tr-lg {
+	clip-path: polygon(0 0, calc(100% - 1rem) 0, 100% 1rem, 100% 100%, 0 100%);
+}
+@utility beveled-tr-xl {
+	clip-path: polygon(
+		0 0,
+		calc(100% - 1.5rem) 0,
+		100% 1.5rem,
+		100% 100%,
+		0 100%
+	);
+}
+@utility beveled-tr-2xl {
+	clip-path: polygon(0 0, calc(100% - 2rem) 0, 100% 2rem, 100% 100%, 0 100%);
+}
+
+@utility beveled-br-sm {
+	clip-path: polygon(
+		0 0,
+		100% 0,
+		100% calc(100% - 0.25rem),
+		calc(100% - 0.25rem) 100%,
+		0 100%
+	);
+}
+@utility beveled-br {
+	clip-path: polygon(
+		0 0,
+		100% 0,
+		100% calc(100% - 0.5rem),
+		calc(100% - 0.5rem) 100%,
+		0 100%
+	);
+}
+@utility beveled-br-lg {
+	clip-path: polygon(
+		0 0,
+		100% 0,
+		100% calc(100% - 1rem),
+		calc(100% - 1rem) 100%,
+		0 100%
+	);
+}
+@utility beveled-br-xl {
+	clip-path: polygon(
+		0 0,
+		100% 0,
+		100% calc(100% - 1.5rem),
+		calc(100% - 1.5rem) 100%,
+		0 100%
+	);
+}
+@utility beveled-br-2xl {
+	clip-path: polygon(
+		0 0,
+		100% 0,
+		100% calc(100% - 2rem),
+		calc(100% - 2rem) 100%,
+		0 100%
+	);
+}
+
+@utility beveled-bl-sm {
+	clip-path: polygon(
+		0 0,
+		100% 0,
+		100% 100%,
+		0.25rem 100%,
+		0 calc(100% - 0.25rem)
+	);
+}
+@utility beveled-bl {
+	clip-path: polygon(
+		0 0,
+		100% 0,
+		100% 100%,
+		0.5rem 100%,
+		0 calc(100% - 0.5rem)
+	);
+}
+@utility beveled-bl-lg {
+	clip-path: polygon(0 0, 100% 0, 100% 100%, 1rem 100%, 0 calc(100% - 1rem));
+}
+@utility beveled-bl-xl {
+	clip-path: polygon(
+		0 0,
+		100% 0,
+		100% 100%,
+		1.5rem 100%,
+		0 calc(100% - 1.5rem)
+	);
+}
+@utility beveled-bl-2xl {
+	clip-path: polygon(0 0, 100% 0, 100% 100%, 2rem 100%, 0 calc(100% - 2rem));
+}
+
+/* All corners versions */
+@utility beveled-sm {
+	clip-path: polygon(
+		0.25rem 0,
+		calc(100% - 0.25rem) 0,
+		100% 0.25rem,
+		100% calc(100% - 0.25rem),
+		calc(100% - 0.25rem) 100%,
+		0.25rem 100%,
+		0 calc(100% - 0.25rem),
+		0 0.25rem
+	);
+}
+@utility beveled {
+	clip-path: polygon(
+		0.5rem 0,
+		calc(100% - 0.5rem) 0,
+		100% 0.5rem,
+		100% calc(100% - 0.5rem),
+		calc(100% - 0.5rem) 100%,
+		0.5rem 100%,
+		0 calc(100% - 0.5rem),
+		0 0.5rem
+	);
+}
+@utility beveled-lg {
+	clip-path: polygon(
+		1rem 0,
+		calc(100% - 1rem) 0,
+		100% 1rem,
+		100% calc(100% - 1rem),
+		calc(100% - 1rem) 100%,
+		1rem 100%,
+		0 calc(100% - 1rem),
+		0 1rem
+	);
+}
+@utility beveled-xl {
+	clip-path: polygon(
+		1.5rem 0,
+		calc(100% - 1.5rem) 0,
+		100% 1.5rem,
+		100% calc(100% - 1.5rem),
+		calc(100% - 1.5rem) 100%,
+		1.5rem 100%,
+		0 calc(100% - 1.5rem),
+		0 1.5rem
+	);
+}
+@utility beveled-2xl {
+	clip-path: polygon(
+		2rem 0,
+		calc(100% - 2rem) 0,
+		100% 2rem,
+		100% calc(100% - 2rem),
+		calc(100% - 2rem) 100%,
+		2rem 100%,
+		0 calc(100% - 2rem),
+		0 2rem
+	);
+}
+
+@utility beveled-tl-tr-sm {
+	clip-path: polygon(
+		0.25rem 0,
+		calc(100% - 0.25rem) 0,
+		100% 0.25rem,
+		100% 100%,
+		0 100%,
+		0 0.25rem
+	);
+}
+@utility beveled-tl-tr {
+	clip-path: polygon(
+		0.5rem 0,
+		calc(100% - 0.5rem) 0,
+		100% 0.5rem,
+		100% 100%,
+		0 100%,
+		0 0.5rem
+	);
+}
+@utility beveled-tl-tr-lg {
+	clip-path: polygon(
+		1rem 0,
+		calc(100% - 1rem) 0,
+		100% 1rem,
+		100% 100%,
+		0 100%,
+		0 1rem
+	);
+}
+@utility beveled-tl-tr-xl {
+	clip-path: polygon(
+		1.5rem 0,
+		calc(100% - 1.5rem) 0,
+		100% 1.5rem,
+		100% 100%,
+		0 100%,
+		0 1.5rem
+	);
+}
+@utility beveled-tl-tr-2xl {
+	clip-path: polygon(
+		2rem 0,
+		calc(100% - 2rem) 0,
+		100% 2rem,
+		100% 100%,
+		0 100%,
+		0 2rem
+	);
+}
+
+@utility beveled-br-bl-sm {
+	clip-path: polygon(
+		0 0,
+		100% 0,
+		100% calc(100% - 0.25rem),
+		calc(100% - 0.25rem) 100%,
+		0.25rem 100%,
+		0 calc(100% - 0.25rem)
+	);
+}
+@utility beveled-br-bl {
+	clip-path: polygon(
+		0 0,
+		100% 0,
+		100% calc(100% - 0.5rem),
+		calc(100% - 0.5rem) 100%,
+		0.5rem 100%,
+		0 calc(100% - 0.5rem)
+	);
+}
+@utility beveled-br-bl-lg {
+	clip-path: polygon(
+		0 0,
+		100% 0,
+		100% calc(100% - 1rem),
+		calc(100% - 1rem) 100%,
+		1rem 100%,
+		0 calc(100% - 1rem)
+	);
+}
+@utility beveled-br-bl-xl {
+	clip-path: polygon(
+		0 0,
+		100% 0,
+		100% calc(100% - 1.5rem),
+		calc(100% - 1.5rem) 100%,
+		1.5rem 100%,
+		0 calc(100% - 1.5rem)
+	);
+}
+@utility beveled-br-bl-2xl {
+	clip-path: polygon(
+		0 0,
+		100% 0,
+		100% calc(100% - 2rem),
+		calc(100% - 2rem) 100%,
+		2rem 100%,
+		0 calc(100% - 2rem)
+	);
+}
+
+@utility beveled-tl-br-sm {
+	clip-path: polygon(
+		0.25rem 0,
+		100% 0,
+		100% calc(100% - 0.25rem),
+		calc(100% - 0.25rem) 100%,
+		0 100%,
+		0 0.25rem
+	);
+}
+@utility beveled-tl-br {
+	clip-path: polygon(
+		0.5rem 0,
+		100% 0,
+		100% calc(100% - 0.5rem),
+		calc(100% - 0.5rem) 100%,
+		0 100%,
+		0 0.5rem
+	);
+}
+@utility beveled-tl-br-lg {
+	clip-path: polygon(
+		1rem 0,
+		100% 0,
+		100% calc(100% - 1rem),
+		calc(100% - 1rem) 100%,
+		0 100%,
+		0 1rem
+	);
+}
+@utility beveled-tl-br-xl {
+	clip-path: polygon(
+		1.5rem 0,
+		100% 0,
+		100% calc(100% - 1.5rem),
+		calc(100% - 1.5rem) 100%,
+		0 100%,
+		0 1.5rem
+	);
+}
+@utility beveled-tl-br-2xl {
+	clip-path: polygon(
+		2rem 0,
+		100% 0,
+		100% calc(100% - 2rem),
+		calc(100% - 2rem) 100%,
+		0 100%,
+		0 2rem
+	);
 }

@@ -124,7 +124,7 @@ export const ships: Ship[] = [
 				position: { x: -0.5, y: 0, z: 3 },
 			},
 		],
-		totalCapacity: 64,
+		totalCapacity: 46,
 	},
 	{
 		name: 'C1 Spirit',
@@ -229,29 +229,6 @@ export const ships: Ship[] = [
 		totalCapacity: 66,
 	},
 	{
-		name: 'Freelancer MAX',
-		cargoGrids: [
-			{
-				width: 4,
-				length: 9,
-				height: 3,
-			},
-			{
-				width: 1,
-				length: 2,
-				height: 3,
-				position: { x: 0, y: 0, z: -3 },
-			},
-			{
-				width: 1,
-				length: 2,
-				height: 3,
-				position: { x: 3, y: 0, z: -3 },
-			},
-		],
-		totalCapacity: 120,
-	},
-	{
 		name: 'Corsair',
 		cargoGrids: [
 			{
@@ -294,6 +271,29 @@ export const ships: Ship[] = [
 			},
 		],
 		totalCapacity: 96,
+	},
+	{
+		name: 'Freelancer MAX',
+		cargoGrids: [
+			{
+				width: 4,
+				length: 9,
+				height: 3,
+			},
+			{
+				width: 1,
+				length: 2,
+				height: 3,
+				position: { x: 0, y: 0, z: -3 },
+			},
+			{
+				width: 1,
+				length: 2,
+				height: 3,
+				position: { x: 3, y: 0, z: -3 },
+			},
+		],
+		totalCapacity: 120,
 	},
 	{
 		name: 'Constellation Taurus',
@@ -639,7 +639,7 @@ export const ships: Ship[] = [
 				width: 12,
 				length: 8,
 				height: 6,
-				position: { x: -2, y: 8, z: 5 },
+				position: { x: 0, y: 11, z: 2 },
 				rotation: { x: Math.PI / 2, y: Math.PI / 2, z: 0 }, // 90 degrees
 			},
 			{
@@ -647,7 +647,7 @@ export const ships: Ship[] = [
 				width: 12,
 				length: 8,
 				height: 6,
-				position: { x: 5, y: 8, z: 0 },
+				position: { x: 7, y: 11, z: -2 },
 				rotation: { x: -Math.PI / 2, y: -Math.PI / 2, z: 0 }, // 90 degrees
 			},
 			{
@@ -655,7 +655,7 @@ export const ships: Ship[] = [
 				width: 12,
 				length: 8,
 				height: 6,
-				position: { x: -2, y: -14, z: 5 },
+				position: { x: 0, y: -11, z: 2 },
 				rotation: { x: Math.PI / 2, y: Math.PI / 2, z: 0 }, // 90 degrees
 			},
 			{
@@ -663,7 +663,7 @@ export const ships: Ship[] = [
 				width: 12,
 				length: 8,
 				height: 6,
-				position: { x: 5, y: -14, z: 0 },
+				position: { x: 7, y: -11, z: -2 },
 				rotation: { x: -Math.PI / 2, y: -Math.PI / 2, z: 0 }, // 90 degrees
 			},
 			{
@@ -671,7 +671,7 @@ export const ships: Ship[] = [
 				width: 12,
 				length: 8,
 				height: 6,
-				position: { x: 6, y: 6, z: 5 },
+				position: { x: 9, y: 9, z: 2 },
 				rotation: { x: Math.PI / 2, y: 0, z: 0 }, // 90 degrees
 			},
 			{
@@ -679,7 +679,7 @@ export const ships: Ship[] = [
 				width: 12,
 				length: 8,
 				height: 6,
-				position: { x: 6, y: -1, z: 0 },
+				position: { x: 9, y: 2, z: -2 },
 				rotation: { x: -Math.PI / 2, y: 0, z: 0 }, // 90 degrees
 			},
 			{
@@ -687,7 +687,7 @@ export const ships: Ship[] = [
 				width: 12,
 				length: 8,
 				height: 6,
-				position: { x: -14, y: 6, z: 5 },
+				position: { x: -13, y: 9, z: 2 },
 				rotation: { x: Math.PI / 2, y: 0, z: 0 }, // 90 degrees
 			},
 			{
@@ -695,7 +695,7 @@ export const ships: Ship[] = [
 				width: 12,
 				length: 8,
 				height: 6,
-				position: { x: -14, y: -1, z: 0 },
+				position: { x: -13, y: 2, z: -2 },
 				rotation: { x: -Math.PI / 2, y: 0, z: 0 }, // 90 degrees
 			},
 		],

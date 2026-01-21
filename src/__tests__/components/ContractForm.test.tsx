@@ -13,6 +13,7 @@ import { describe, it, expect, beforeEach, vi } from 'vitest'
 import { ContractForm } from '@/components/cargo/ContractForm'
 import { HaulingMode } from '@/utils/calculateContainers'
 import { ContractProvider } from '@/providers/ContractProvider'
+import { CargoProvider } from '@/providers/CargoProvider'
 
 // Mock the hooks
 const mockSaveContracts = vi.fn()
@@ -44,27 +45,32 @@ vi.mock('@/components/cargo/LocationSelect', () => ({
 	LocationSelect: ({
 		value,
 		onValueChange,
-		...props
-	}: React.ComponentProps<'select'> & {
+		placeholder,
+	}: {
+		value?: string
 		onValueChange?: (value: string) => void
+		placeholder?: string
 	}) => (
 		<select
 			data-testid='location-select'
+			aria-label={placeholder || 'Select location'}
 			value={value || ''}
 			onChange={(e) => onValueChange?.(e.target.value)}
-			{...props}
 		>
 			<option value=''>Select location</option>
 			<option value='Baijini Point'>Baijini Point</option>
 			<option value='Riker Memorial Spaceport'>Riker Memorial Spaceport</option>
-			<option value='Port Olisar'>Port Olisar</option>
+			<option value='Port Tressler'>Port Tressler</option>
+			<option value='Everus Harbor'>Everus Harbor</option>
 		</select>
 	),
 }))
 
-// Test wrapper with ContractProvider
+// Test wrapper with both ContractProvider and CargoProvider
 const TestWrapper = ({ children }: { children: React.ReactNode }) => (
-	<ContractProvider>{children}</ContractProvider>
+	<CargoProvider>
+		<ContractProvider>{children}</ContractProvider>
+	</CargoProvider>
 )
 
 describe('ContractForm', () => {
@@ -127,6 +133,157 @@ describe('ContractForm', () => {
 				name: 'Add to Contract',
 			})[0]
 			expect(addButton).toBeDisabled()
+		})
+
+		it('should render route type toggle with Loop selected by default', () => {
+			renderComponent()
+
+			expect(screen.getByText('Route Type:')).toBeInTheDocument()
+			expect(screen.getByRole('button', { name: 'Loop' })).toBeInTheDocument()
+			expect(screen.getByRole('button', { name: 'Path' })).toBeInTheDocument()
+			expect(
+				screen.getByText(/Route will return to the port of origin/)
+			).toBeInTheDocument()
+		})
+	})
+
+	describe('Route Type Toggle', () => {
+		it('should show end location selector when Path is selected', () => {
+			renderComponent()
+
+			const pathButton = screen.getByRole('button', { name: 'Path' })
+			fireEvent.click(pathButton)
+
+			expect(screen.getByText('End Location')).toBeInTheDocument()
+			expect(
+				screen.getByText(/Route will end at the specified location/)
+			).toBeInTheDocument()
+		})
+
+		it('should hide end location selector when switching back to Loop', () => {
+			renderComponent()
+
+			// Switch to Path
+			const pathButton = screen.getByRole('button', { name: 'Path' })
+			fireEvent.click(pathButton)
+			expect(screen.getByText('End Location')).toBeInTheDocument()
+
+			// Switch back to Loop
+			const loopButton = screen.getByRole('button', { name: 'Loop' })
+			fireEvent.click(loopButton)
+			expect(screen.queryByText('End Location')).not.toBeInTheDocument()
+		})
+
+		it('should show alert when submitting Path route without end location', async () => {
+			renderComponent()
+
+			// Fill form with valid contract
+			const originSelect = screen.getAllByTestId('location-select')[0]
+			fireEvent.change(originSelect, { target: { value: 'Baijini Point' } })
+
+			const destinationSelect = screen.getAllByTestId('location-select')[1]
+			fireEvent.change(destinationSelect, {
+				target: { value: 'Riker Memorial Spaceport' },
+			})
+
+			const cargoTypeInput = screen.getByLabelText('Cargo Type')
+			const quantityInput = screen.getAllByPlaceholderText('Qty')[0]
+			const addCargoButton = screen.getAllByRole('button', { name: 'Add' })[0]
+
+			fireEvent.change(cargoTypeInput, { target: { value: 'Copper' } })
+			fireEvent.change(quantityInput, { target: { value: '2' } })
+			fireEvent.click(addCargoButton)
+
+			const addToContractButton = screen.getAllByRole('button', {
+				name: 'Add to Contract',
+			})[0]
+			fireEvent.click(addToContractButton)
+
+			// Save contract
+			const saveContractButton = screen.getAllByRole('button', {
+				name: 'Save Contract',
+			})[0]
+			fireEvent.click(saveContractButton)
+
+			// Switch to Path mode without selecting end location
+			const pathButton = screen.getByRole('button', { name: 'Path' })
+			fireEvent.click(pathButton)
+
+			// Try to submit
+			const submitButton = screen.getAllByRole('button', {
+				name: /Generate Layout/i,
+			})[0]
+			fireEvent.click(submitButton)
+
+			const alertTitle = await screen.findByText('End location required')
+			expect(alertTitle).toBeTruthy()
+		})
+
+		it('should submit with end location when Path route is configured', async () => {
+			renderComponent()
+
+			// Fill form with valid contract
+			const originSelect = screen.getAllByTestId('location-select')[0]
+			fireEvent.change(originSelect, { target: { value: 'Baijini Point' } })
+
+			const destinationSelect = screen.getAllByTestId('location-select')[1]
+			fireEvent.change(destinationSelect, {
+				target: { value: 'Riker Memorial Spaceport' },
+			})
+
+			const cargoTypeInput = screen.getByLabelText('Cargo Type')
+			const quantityInput = screen.getAllByPlaceholderText('Qty')[0]
+			const addCargoButton = screen.getAllByRole('button', { name: 'Add' })[0]
+
+			fireEvent.change(cargoTypeInput, { target: { value: 'Copper' } })
+			fireEvent.change(quantityInput, { target: { value: '2' } })
+			fireEvent.click(addCargoButton)
+
+			const addToContractButton = screen.getAllByRole('button', {
+				name: 'Add to Contract',
+			})[0]
+			fireEvent.click(addToContractButton)
+
+			// Save contract
+			const saveContractButton = screen.getAllByRole('button', {
+				name: 'Save Contract',
+			})[0]
+			fireEvent.click(saveContractButton)
+
+			// Switch to Path mode
+			const pathButton = screen.getByRole('button', { name: 'Path' })
+			fireEvent.click(pathButton)
+
+			// Wait for the End Location section to appear
+			await waitFor(() => {
+				expect(screen.getByText('End Location')).toBeInTheDocument()
+			})
+
+			// Find the end location select by its aria-label
+			const endLocationSelect = screen.getByLabelText('Select end location')
+			fireEvent.change(endLocationSelect, {
+				target: { value: 'Everus Harbor' },
+			})
+
+			// Verify the selection was made
+			expect(endLocationSelect).toHaveValue('Everus Harbor')
+
+			// Submit
+			const submitButton = screen.getAllByRole('button', {
+				name: /Generate Layout/i,
+			})[0]
+			fireEvent.click(submitButton)
+
+			await waitFor(() => {
+				expect(mockOnSubmit).toHaveBeenCalledWith(
+					expect.arrayContaining([
+						expect.objectContaining({
+							origin: 'Baijini Point',
+						}),
+					]),
+					'Everus Harbor'
+				)
+			})
 		})
 	})
 
@@ -301,7 +458,8 @@ describe('ContractForm', () => {
 								}),
 							]),
 						}),
-					])
+					]),
+					undefined // endLocation is undefined for loop routes
 				)
 			})
 		})
@@ -341,6 +499,7 @@ describe('ContractForm', () => {
 			expect(title).toBeTruthy()
 		})
 	})
+
 	describe('OCR Scanner', () => {
 		it('should open OCR scanner on desktop', async () => {
 			Object.defineProperty(navigator, 'userAgent', {
@@ -387,6 +546,25 @@ describe('ContractForm', () => {
 			fireEvent.click(resetButton)
 
 			expect(mockOnReset).toHaveBeenCalled()
+		})
+
+		it('should reset route type to Loop when clicking reset', () => {
+			renderComponent()
+
+			// Switch to Path mode
+			const pathButton = screen.getByRole('button', { name: 'Path' })
+			fireEvent.click(pathButton)
+			expect(screen.getByText('End Location')).toBeInTheDocument()
+
+			// Click reset
+			const resetButton = screen.getAllByRole('button', { name: 'Reset' })[0]
+			fireEvent.click(resetButton)
+
+			// Should be back to Loop mode
+			expect(screen.queryByText('End Location')).not.toBeInTheDocument()
+			expect(
+				screen.getByText(/Route will return to the port of origin/)
+			).toBeInTheDocument()
 		})
 	})
 })

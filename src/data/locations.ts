@@ -12,6 +12,7 @@ export interface Location {
 		| 'SURFACE_LOCATION'
 		| 'ORBITAL_STATION'
 		| 'LAGRANGE_POINT_STATION'
+		| 'GATEWAY'
 		| 'STAR'
 	parentObject?: string // Optional property for parent planet name
 	requiresPlanetaryVisit?: boolean
@@ -36,7 +37,7 @@ export interface Location {
 
 export const locations: Location[] = [
 	{
-		name: 'Microtech',
+		name: 'microTech',
 		coordinates: {
 			x: 22462098871.183636,
 			y: 37185749678.426445,
@@ -54,19 +55,19 @@ export const locations: Location[] = [
 			z: -343308.506814,
 		},
 		type: 'SURFACE_LOCATION',
-		parentObject: 'Microtech',
+		parentObject: 'microTech',
 		requiresPlanetaryVisit: true,
 		isSelectable: true,
 	},
 	{
-		name: 'Microtech Logistics Depot S4LD01',
+		name: 'microTech Logistics Depot S4LD01',
 		coordinates: {
 			x: 22462094548.509617,
 			y: 37186745733.850815,
 			z: -19162.979761,
 		},
 		type: 'SURFACE_LOCATION',
-		parentObject: 'Microtech',
+		parentObject: 'microTech',
 		requiresPlanetaryVisit: true,
 		isSelectable: true,
 	},
@@ -78,7 +79,7 @@ export const locations: Location[] = [
 			z: 809025.374179,
 		},
 		type: 'ORBITAL_STATION',
-		parentObject: 'Microtech',
+		parentObject: 'microTech',
 		isSelectable: true,
 	},
 	{
@@ -89,31 +90,31 @@ export const locations: Location[] = [
 			z: 736667.670429,
 		},
 		type: 'SURFACE_LOCATION',
-		parentObject: 'Microtech',
+		parentObject: 'microTech',
 		requiresPlanetaryVisit: true,
 		isSelectable: true,
 	},
 	{
-		name: 'Graycat Complex-A',
+		name: 'Greycat Stanton IV Production Complex-A',
 		coordinates: {
 			x: 22461710841.947369,
 			y: 37185987264.541504,
 			z: -895197.032031,
 		},
 		type: 'SURFACE_LOCATION',
-		parentObject: 'Microtech',
+		parentObject: 'microTech',
 		requiresPlanetaryVisit: true,
 		isSelectable: true,
 	},
 	{
-		name: 'Microtech Logistics Depot S4LD13',
+		name: 'microTech Logistics Depot S4LD13',
 		coordinates: {
 			x: 22462875241.786415,
 			y: 37185397997.735977,
 			z: 505640.973205,
 		},
 		type: 'SURFACE_LOCATION',
-		parentObject: 'Microtech',
+		parentObject: 'microTech',
 		requiresPlanetaryVisit: true,
 		isSelectable: true,
 	},
@@ -125,7 +126,7 @@ export const locations: Location[] = [
 			z: -290382.846904,
 		},
 		type: 'SURFACE_LOCATION',
-		parentObject: 'Microtech',
+		parentObject: 'microTech',
 		requiresPlanetaryVisit: true,
 		isSelectable: true,
 	},
@@ -137,7 +138,7 @@ export const locations: Location[] = [
 			z: 316613.735807,
 		},
 		type: 'SURFACE_LOCATION',
-		parentObject: 'Microtech',
+		parentObject: 'microTech',
 		requiresPlanetaryVisit: true,
 		isSelectable: true,
 	},
@@ -149,7 +150,7 @@ export const locations: Location[] = [
 			z: -219.241315,
 		},
 		type: 'MOON',
-		parentObject: 'Microtech',
+		parentObject: 'microTech',
 		requiresPlanetaryVisit: true,
 		isSelectable: true,
 	},
@@ -173,7 +174,7 @@ export const locations: Location[] = [
 			z: 358.985138,
 		},
 		type: 'MOON',
-		parentObject: 'Microtech',
+		parentObject: 'microTech',
 		requiresPlanetaryVisit: true,
 		isSelectable: true,
 	},
@@ -234,7 +235,7 @@ export const locations: Location[] = [
 			z: -1177.982188,
 		},
 		type: 'LAGRANGE_POINT_STATION',
-		parentObject: 'Microtech',
+		parentObject: 'microTech',
 		isSelectable: true,
 	},
 	{
@@ -245,7 +246,7 @@ export const locations: Location[] = [
 			z: -10634838.051544,
 		},
 		type: 'LAGRANGE_POINT_STATION',
-		parentObject: 'Microtech',
+		parentObject: 'microTech',
 		isSelectable: true,
 	},
 	{
@@ -256,7 +257,7 @@ export const locations: Location[] = [
 			z: -10590375.485732,
 		},
 		type: 'LAGRANGE_POINT_STATION',
-		parentObject: 'Microtech',
+		parentObject: 'microTech',
 		requiresPlanetaryVisit: true,
 		isSelectable: true,
 	},
@@ -268,7 +269,7 @@ export const locations: Location[] = [
 			z: -11799125.531424,
 		},
 		type: 'LAGRANGE_POINT_STATION',
-		parentObject: 'Microtech',
+		parentObject: 'microTech',
 		requiresPlanetaryVisit: true,
 		isSelectable: true,
 	},
@@ -280,7 +281,7 @@ export const locations: Location[] = [
 			z: -7822829.551176,
 		},
 		type: 'LAGRANGE_POINT_STATION',
-		parentObject: 'Microtech',
+		parentObject: 'microTech',
 		requiresPlanetaryVisit: true,
 		isSelectable: true,
 	},
@@ -292,7 +293,7 @@ export const locations: Location[] = [
 			z: -155.004205,
 		},
 		type: 'MOON',
-		parentObject: 'Microtech',
+		parentObject: 'microTech',
 		isSelectable: false,
 	},
 	{

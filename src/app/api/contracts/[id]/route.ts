@@ -3,10 +3,10 @@ import { NextRequest, NextResponse } from 'next/server'
 
 export async function PUT(
 	request: NextRequest,
-	{ params }: { params: Promise<{ id: string }> }
+	{ params }: { params: Promise<{ id: string }> },
 ) {
 	try {
-		const updates = await request.json()
+		//const updates = await request.json()
 		const resolvedParams = await params
 		const { id } = resolvedParams
 
@@ -16,15 +16,15 @@ export async function PUT(
 		return NextResponse.json({ success: true, id })
 	} catch (error) {
 		return NextResponse.json(
-			{ error: 'Failed to update contract' },
-			{ status: 500 }
+			{ error: `Failed to update contract: ${error}` },
+			{ status: 500 },
 		)
 	}
 }
 
 export async function DELETE(
 	request: NextRequest,
-	{ params }: { params: Promise<{ id: string }> }
+	{ params }: { params: Promise<{ id: string }> },
 ) {
 	try {
 		const resolvedParams = await params
@@ -35,8 +35,8 @@ export async function DELETE(
 		return NextResponse.json({ success: true })
 	} catch (error) {
 		return NextResponse.json(
-			{ error: 'Failed to delete contract' },
-			{ status: 500 }
+			{ error: `Failed to delete contract: ${error}` },
+			{ status: 500 },
 		)
 	}
 }

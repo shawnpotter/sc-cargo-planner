@@ -16,7 +16,7 @@ export async function POST(request: NextRequest) {
 		if (!Array.isArray(contracts)) {
 			return NextResponse.json(
 				{ error: 'Invalid data format' },
-				{ status: 400 }
+				{ status: 400 },
 			)
 		}
 
@@ -36,8 +36,8 @@ export async function POST(request: NextRequest) {
 		})
 	} catch (error) {
 		return NextResponse.json(
-			{ error: 'Failed to process contracts' },
-			{ status: 500 }
+			{ error: `Failed to process contracts: ${error}` },
+			{ status: 500 },
 		)
 	}
 }

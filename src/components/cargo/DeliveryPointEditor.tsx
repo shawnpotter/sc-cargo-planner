@@ -26,7 +26,7 @@ export const DeliveryPointEditor: React.FC<DeliveryPointEditorProps> = ({
 	})
 
 	return (
-		<div className='bg-card border border-border p-4 rounded shadow-sm flex flex-col gap-4'>
+		<div className='bg-card border border-primary p-4 rounded shadow-sm flex flex-col gap-4'>
 			<div>
 				<label htmlFor='destination'>Select a destination</label>
 				<LocationSelect
@@ -36,7 +36,7 @@ export const DeliveryPointEditor: React.FC<DeliveryPointEditorProps> = ({
 			</div>
 
 			{/* Cargo management section */}
-			<div className='bg-card p-3 rounded border border-border'>
+			<div className='bg-card p-3 rounded border dark:border-muted border-primary'>
 				<h3 className='text-sm font-semibold text-foreground mb-2'>
 					Add Cargo
 				</h3>
@@ -67,6 +67,7 @@ export const DeliveryPointEditor: React.FC<DeliveryPointEditorProps> = ({
 						onAddDelivery()
 					}}
 					variant='default'
+					className='!bg-primary'
 					disabled={!value.location || value.cargo.length === 0}
 				>
 					Add to Contract

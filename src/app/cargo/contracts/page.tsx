@@ -1,3 +1,4 @@
+// @/app/cargo/contracts/page.tsx
 'use client'
 
 import { useCargo } from '@/providers/CargoProvider'
@@ -17,7 +18,7 @@ import {
 	AlertDialogFooter,
 	AlertDialogAction,
 } from '@/components/ui/alert-dialog'
-import { CubeIcon, ArrowLeftIcon } from '@heroicons/react/24/outline'
+import { CubeIcon } from '@heroicons/react/24/outline'
 import { useState } from 'react'
 
 export default function ContractsPage() {
@@ -27,23 +28,26 @@ export default function ContractsPage() {
 		haulingMode,
 		setHaulingMode,
 		setContainers,
-		containers,
+		setRouteType,
+		setEndLocation,
 	} = useCargo()
 	const { contracts, clearContracts } = useContracts()
 	const [alertOpen, setAlertOpen] = useState(false)
 	const [alertTitle, setAlertTitle] = useState('')
 	const [alertDescription, setAlertDescription] = useState('')
 
-	// Check if cargo layout has been generated (containers exist)
-	const hasCargoLayout = containers.length > 0
-
 	const handleHaulingModeChange = (mode: HaulingMode) => {
 		setHaulingMode(mode)
 		clearContracts()
 		setContainers([])
+		setRouteType('loop')
+		setEndLocation(null)
 	}
 
-	const handleContractSubmit = (newContracts: Contract[]) => {
+	const handleContractSubmit = (
+		newContracts: Contract[],
+		endLocation?: string,
+	) => {
 		if (selectedShip) {
 			// Load the cargo and navigate to main cargo view
 			handleLoadCargo({
@@ -52,12 +56,13 @@ export default function ContractsPage() {
 				setContainers,
 				routeAlgorithm: RouteAlgorithm.A_STAR,
 				haulingMode,
+				endLocation,
 			})
 			navigateTo('/cargo')
 		} else {
 			setAlertTitle('No ship selected')
 			setAlertDescription(
-				'Please select a ship first before configuring contracts.'
+				'Please select a ship first before configuring contracts.',
 			)
 			setAlertOpen(true)
 		}
@@ -66,6 +71,8 @@ export default function ContractsPage() {
 	const handleReset = () => {
 		clearContracts()
 		setContainers([])
+		setRouteType('loop')
+		setEndLocation(null)
 	}
 
 	if (!selectedShip) {
@@ -94,30 +101,21 @@ export default function ContractsPage() {
 		<div className='min-h-screen flex flex-col bg-background text-foreground'>
 			<div className='flex-1 p-4'>
 				<div className='max-w-4xl mx-auto'>
-					<div className='mb-4'>
-						<button
-							onClick={() => navigateTo('/cargo')}
-							className='flex items-center gap-2 text-muted-foreground hover:text-foreground transition-colors'
-						>
-							<ArrowLeftIcon className='w-4 h-4' />
-							<span className='text-sm'>Back to Cargo Hold</span>
-						</button>
-					</div>
-
-					<div className='mb-6 flex items-center justify-between'>
+					<div className='mb-6 flex flex-col md:flex-row items-center justify-between'>
 						<h1 className='text-3xl font-bold mb-2'>Configure Contracts</h1>
 						<HaulingModeToggle
 							currentMode={haulingMode}
 							onChange={handleHaulingModeChange}
+							className='text-xs md:text-base'
 						/>
 					</div>
 
 					<div className='space-y-6'>
 						<div className='p-4 rounded-lg bg-muted/30 border'>
-							<h2 className='font-semibold text-lg mb-2'>
+							<h2 className='text-base font-semibold md:text-lg mb-2'>
 								Ship: {selectedShip.name}
 							</h2>
-							<p className='text-muted-foreground'>
+							<p className='text-sm md:text-base text-muted-foreground'>
 								Capacity: {selectedShip.totalCapacity} SCU
 							</p>
 						</div>

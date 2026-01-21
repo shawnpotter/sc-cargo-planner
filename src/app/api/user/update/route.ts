@@ -5,6 +5,11 @@ import prisma from '@/lib/prisma'
 import { authOptions } from '@/lib/authOptions'
 
 export async function PUT(request: Request) {
+	return NextResponse.json(
+		{ error: 'Account updates are disabled in this beta build' },
+		{ status: 503 },
+	)
+	/* 
 	try {
 		const session = await getServerSession(authOptions)
 
@@ -70,5 +75,6 @@ export async function PUT(request: Request) {
 			{ error: 'An error occurred while updating user' },
 			{ status: 500 }
 		)
-	}
+	} 
+		*/
 }

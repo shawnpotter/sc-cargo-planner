@@ -32,7 +32,10 @@ export interface ImageProcessingSettings {
  * Represents a parsed contract containing details about cargo transportation.
  *
  * @property origin - The starting location of the contract (optional).
+ * @property contractType - The type of contract: 'delivery' (pickup from origin, deliver to destinations) or 'pickup' (collect from destinations, deliver to origin) (optional).
  * @property destinations - An array of destination objects, each specifying a location and associated cargo details (optional).
+ *   For 'delivery' contracts: These are delivery destinations where cargo is delivered.
+ *   For 'pickup' contracts: These are pickup locations where cargo is collected from.
  * @property destinations.location - The destination location.
  * @property destinations.cargo - An array of cargo items, each with a type and quantity.
  * @property destinations.cargo.type - The type of cargo.
@@ -44,6 +47,7 @@ export interface ImageProcessingSettings {
  */
 export interface ParsedContract {
 	origin?: string
+	contractType?: 'delivery' | 'pickup'
 	destinations?: Array<{
 		location: string
 		cargo: Array<{

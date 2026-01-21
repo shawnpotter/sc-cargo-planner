@@ -17,25 +17,32 @@ export const CargoInput: React.FC<CargoInputProps> = ({
 	const disabled = !value.cargoType || value.quantity <= 0
 
 	return (
-		<div className='flex items-end gap-2'>
+		<div className='flex flex-col items-center md:flex-row gap-2'>
 			<div className='flex-1'>
 				<div>
-					<label htmlFor='cargoType'>Cargo Type</label>
+					<label
+						htmlFor='cargoType'
+						className='hidden'
+					>
+						Cargo Type
+					</label>
 					<Input
 						id='cargoType'
 						type='text'
+						className='!dark:bg-accent-foreground bg-accent'
 						value={value.cargoType}
 						placeholder='Cargo Type'
 						onChange={(e) => onChange({ ...value, cargoType: e.target.value })}
 					/>
 				</div>
 			</div>
-			<div className='w-24'>
+			<div className='md:w-24'>
 				<div className='flex items-center gap-2'>
 					<Input
 						type='number'
 						value={value.quantity || ''}
 						min='1'
+						className='!dark:bg-accent-foreground bg-accent'
 						onChange={(e) =>
 							onChange({ ...value, quantity: parseInt(e.target.value) || 0 })
 						}
@@ -51,6 +58,7 @@ export const CargoInput: React.FC<CargoInputProps> = ({
 				}}
 				variant='default'
 				disabled={disabled}
+				className='!bg-primary'
 			>
 				Add
 			</Button>

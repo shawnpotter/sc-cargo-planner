@@ -25,10 +25,11 @@ function HaulingModeToggle({
 	className = '',
 }: HaulingModeToggleProps) {
 	return (
-		<div className={className}>
+		<div className={`flex gap-1 ${className}`}>
 			<Button
 				onClick={() => onChange(HaulingMode.CONTRACT)}
 				variant={currentMode === HaulingMode.CONTRACT ? 'default' : 'secondary'}
+				className='p-3'
 			>
 				Contract Hauling
 			</Button>
@@ -37,6 +38,7 @@ function HaulingModeToggle({
 				variant={
 					currentMode === HaulingMode.COMMODITY ? 'default' : 'secondary'
 				}
+				className='p-3'
 			>
 				Commodity Hauling
 			</Button>

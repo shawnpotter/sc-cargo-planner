@@ -4,6 +4,11 @@ import bcrypt from 'bcrypt'
 import prisma from '@/lib/prisma'
 
 export async function POST(request: Request) {
+	return NextResponse.json(
+		{ error: 'Account creation is disabled in this beta build' },
+		{ status: 503 },
+	)
+	/* 
 	try {
 		const { email, password, name, requestId } = await request.json()
 		console.log('Request ID:', requestId) // Debugging log
@@ -12,7 +17,7 @@ export async function POST(request: Request) {
 		if (!email || !password || !name) {
 			return NextResponse.json(
 				{ error: 'Email, username, and password are required' },
-				{ status: 400 }
+				{ status: 400 },
 			)
 		}
 
@@ -25,7 +30,7 @@ export async function POST(request: Request) {
 			console.log('User already exists with email:', email)
 			return NextResponse.json(
 				{ error: 'User already exists with this email' },
-				{ status: 409 }
+				{ status: 409 },
 			)
 		}
 
@@ -38,7 +43,7 @@ export async function POST(request: Request) {
 			console.log('Username already exists:', name)
 			return NextResponse.json(
 				{ error: 'Username already taken' },
-				{ status: 409 }
+				{ status: 409 },
 			)
 		}
 
@@ -65,7 +70,7 @@ export async function POST(request: Request) {
 		console.error('Error during signup:', error)
 		return NextResponse.json(
 			{ error: 'An error occurred during signup' },
-			{ status: 500 }
+			{ status: 500 },
 		)
-	}
+	} */
 }

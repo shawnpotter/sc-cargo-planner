@@ -4,15 +4,10 @@ import { useCargo } from '@/providers/CargoProvider'
 import { useCargoNavigation } from '@/hooks/useCargoNavigation'
 import { Ship } from '@/constants/types'
 import ShipSelector from '@/components/cargo/ShipSelector'
-import { ArrowLeftIcon } from '@heroicons/react/24/outline'
 
 export default function ShipsPage() {
 	const { navigateTo } = useCargoNavigation()
-	const { selectedShip, setSelectedShip, clearContainers, containers } =
-		useCargo()
-
-	// Check if cargo layout has been generated (containers exist)
-	const hasCargoLayout = containers.length > 0
+	const { selectedShip, setSelectedShip, clearContainers } = useCargo()
 
 	const handleSelectShip = (ship: Ship) => {
 		setSelectedShip(ship)
@@ -21,52 +16,39 @@ export default function ShipsPage() {
 	}
 
 	return (
-		<div className='min-h-screen flex flex-col bg-background text-foreground'>
-			<div className='flex-1 p-4'>
-				<div className='max-w-4xl mx-auto'>
-					<div className='mb-4'>
-						<button
-							onClick={() => navigateTo('/cargo')}
-							className='flex items-center gap-2 text-muted-foreground hover:text-foreground transition-colors'
-						>
-							<ArrowLeftIcon className='w-4 h-4' />
-							<span className='text-sm'>Back to Cargo Hold</span>
-						</button>
-					</div>
-
+		<div className='min-h-screen flex flex-col bg-background text-foreground w-full'>
+			<div className='flex-1 p-4 w-full'>
+				<div className='w-full mx-auto'>
 					<div className='mb-6'>
 						<h1 className='text-3xl font-bold mb-2'>Select Ship</h1>
 						<p className='text-muted-foreground'>
 							Choose a ship for your cargo operations
 						</p>
 					</div>
-
-					<ShipSelector onSelect={handleSelectShip} />
-
 					{selectedShip && (
-						<div className='mt-6 p-4 rounded-lg bg-muted/30 border'>
-							<h2 className='font-semibold text-lg mb-2'>
-								Currently Selected: {selectedShip.name}
-							</h2>
-							<p className='text-muted-foreground'>
-								Capacity: {selectedShip.totalCapacity} SCU
-							</p>
-							<div className='mt-4 flex gap-2'>
-								<button
-									onClick={() => navigateTo('/cargo/contracts')}
-									className='px-4 py-2 bg-primary text-primary-foreground rounded-md hover:bg-primary/90 transition'
-								>
-									Configure Contracts
-								</button>
-								<button
-									onClick={() => navigateTo('/cargo')}
-									className='px-4 py-2 bg-secondary text-secondary-foreground rounded-md hover:bg-secondary/90 transition'
-								>
-									View Cargo Hold
-								</button>
+						<div className='p-3 md:p-4 rounded-lg bg-muted/30 border'>
+							<div className='flex flex-col lg:flex-row md:gap-3 items-center justify-between'>
+								<div>
+									<h2 className='font-semibold text-lg'>
+										Selected: {selectedShip.name}
+									</h2>
+									<p className='text-muted-foreground'>
+										Capacity: {selectedShip.totalCapacity} SCU
+									</p>
+								</div>
+								<div className=''>
+									<button
+										onClick={() => navigateTo('/cargo/contracts')}
+										className='px-4 py-2 bg-primary text-primary-foreground rounded hover:bg-primary/90'
+									>
+										Continue to Contracts
+									</button>
+								</div>
 							</div>
 						</div>
 					)}
+
+					<ShipSelector onSelect={handleSelectShip} />
 				</div>
 			</div>
 		</div>

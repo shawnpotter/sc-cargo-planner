@@ -6,6 +6,7 @@ import { Button } from '@/components/ui/button'
 interface SignInFormProps {
 	readonly onSubmit: (credentials: { name: string; password: string }) => void
 	readonly onCancel: () => void
+	readonly disabled?: boolean
 }
 
 /**
@@ -21,7 +22,7 @@ interface SignInFormProps {
  * - The form includes fields for username and password.
  * - The "Authenticate" button submits the form, while the "Cancel" button triggers the onCancel callback.
  */
-function SignInForm({ onSubmit, onCancel }: SignInFormProps) {
+function SignInForm({ onSubmit, onCancel, disabled = false }: SignInFormProps) {
 	const [name, setName] = useState('')
 	const [password, setPassword] = useState('')
 
@@ -38,6 +39,12 @@ function SignInForm({ onSubmit, onCancel }: SignInFormProps) {
 				<span></span>
 			</div>
 
+			{disabled && (
+				<div className='text-sm text-muted-foreground'>
+					Authentication is disabled in this beta build.
+				</div>
+			)}
+
 			<div>
 				<label htmlFor='username'>Username</label>
 				<Input
@@ -46,6 +53,7 @@ function SignInForm({ onSubmit, onCancel }: SignInFormProps) {
 					value={name}
 					onChange={(e) => setName(e.target.value)}
 					placeholder='Enter your username'
+					disabled={disabled}
 				/>
 			</div>
 
@@ -57,6 +65,7 @@ function SignInForm({ onSubmit, onCancel }: SignInFormProps) {
 					value={password}
 					onChange={(e) => setPassword(e.target.value)}
 					placeholder='Enter your password'
+					disabled={disabled}
 				/>
 			</div>
 
@@ -72,6 +81,7 @@ function SignInForm({ onSubmit, onCancel }: SignInFormProps) {
 				<Button
 					variant='default'
 					type='submit'
+					disabled={disabled}
 				>
 					Authenticate
 				</Button>

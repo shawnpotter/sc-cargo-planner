@@ -19,6 +19,7 @@ export interface LocationNode {
 		| 'ORBITAL_STATION'
 		| 'LAGRANGE_POINT_STATION'
 		| 'STAR'
+		| 'GATEWAY'
 	requiresPlanetaryVisit?: boolean
 }
 
@@ -96,13 +97,13 @@ export class RouteGraph {
 	addEdge(from: string, to: string): void {
 		if (!this.nodes.has(from) || !this.nodes.has(to)) {
 			throw new Error(
-				`Cannot add edge between ${from} and ${to}: one or both nodes don't exist`
+				`Cannot add edge between ${from} and ${to}: one or both nodes don't exist`,
 			)
 		}
 
 		const distance = this.calculateDistance(
 			this.nodes.get(from)!,
-			this.nodes.get(to)!
+			this.nodes.get(to)!,
 		)
 
 		// Add additional weight for planetary entry/exit
@@ -147,7 +148,7 @@ export class RouteGraph {
 		return Math.sqrt(
 			Math.pow(to.coordinates.x - from.coordinates.x, 2) +
 				Math.pow(to.coordinates.y - from.coordinates.y, 2) +
-				Math.pow(to.coordinates.z - from.coordinates.z, 2)
+				Math.pow(to.coordinates.z - from.coordinates.z, 2),
 		)
 	}
 
@@ -196,12 +197,12 @@ export class RouteGraph {
 				const planetName = this.planetaryConstraints.get(firstUnvisited)
 				if (!planetName) {
 					throw new Error(
-						`Unable to determine planetary hub for ${firstUnvisited}`
+						`Unable to determine planetary hub for ${firstUnvisited}`,
 					)
 				}
 				if (!this.nodes.has(planetName)) {
 					throw new Error(
-						`Planet node ${planetName} (parent of ${firstUnvisited}) not present in graph`
+						`Planet node ${planetName} (parent of ${firstUnvisited}) not present in graph`,
 					)
 				}
 				if (!route.includes(planetName)) {
@@ -209,7 +210,7 @@ export class RouteGraph {
 					current = planetName
 				} else {
 					throw new Error(
-						`Unable to find valid route to remaining destinations`
+						`Unable to find valid route to remaining destinations`,
 					)
 				}
 			} else {

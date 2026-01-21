@@ -6,6 +6,7 @@ interface AuthOptionsProps {
 	readonly onSignIn: () => void
 	readonly onSignUp: () => void
 	readonly onContinueAsGuest: () => void
+	readonly authDisabled?: boolean
 }
 
 /**
@@ -21,6 +22,7 @@ function AuthOptions({
 	onSignIn,
 	onSignUp,
 	onContinueAsGuest,
+	authDisabled = false,
 }: AuthOptionsProps) {
 	return (
 		<div>
@@ -30,12 +32,18 @@ function AuthOptions({
 					Authenticated users have access to saved configurations and extended
 					system capabilities.
 				</p>
+				{authDisabled && (
+					<p className='text-sm text-muted-foreground mt-2'>
+						Account features are disabled in this beta build.
+					</p>
+				)}
 			</div>
 
 			<div>
 				<Button
 					onClick={onSignIn}
 					variant='default'
+					disabled={authDisabled}
 				>
 					Sign In
 				</Button>
@@ -43,6 +51,7 @@ function AuthOptions({
 				<Button
 					onClick={onSignUp}
 					variant='default'
+					disabled={authDisabled}
 				>
 					Create Account
 				</Button>
