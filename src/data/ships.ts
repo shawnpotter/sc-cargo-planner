@@ -233,8 +233,8 @@ export const ships: Ship[] = [
 		cargoGrids: [
 			{
 				width: 4,
-				length: 6,
-				height: 3,
+				length: 9,
+				height: 2,
 			},
 		],
 		totalCapacity: 72,
