@@ -1,7 +1,8 @@
 // @/utils/handleLoadCargo.ts
 import { Ship, Container, Contract, RouteAlgorithm } from '@/constants/types'
 import { findNextPosition } from '@/utils/findNextPosition'
-import { optimizeRoute } from '@/utils/routeOptimizer'
+import { optimizeRoute, OptimizedRoute } from '@/utils/routeOptimizer'
+import type { Location } from '@/data/locations'
 import {
 	calculateOptimalContainerSize,
 	HaulingMode,
@@ -11,86 +12,74 @@ interface HandleLoadCargoProps {
 	contracts: Contract[]
 	selectedShip: Ship
 	setContainers: (containers: Container[]) => void
+	setOptimizedRoute?: (route: OptimizedRoute | null) => void
 	routeAlgorithm?: RouteAlgorithm
 	haulingMode?: HaulingMode
+	startLocation?: string
 	endLocation?: string
+	locations?: Location[]
 }
 
-/**
- * Loads cargo containers onto a ship based on provided contracts and selected ship configuration.
- * Uses global route optimization and FILO loading order for optimal container placement.
- *
- * @param contracts - Array of contract objects, each containing delivery points and cargo details.
- * @param selectedShip - The ship object onto which containers will be loaded.
- * @param setContainers - State setter function to update the list of loaded containers.
- * @param routeAlgorithm - Algorithm used to optimize delivery routes. Defaults to NEAREST_NEIGHBOR.
- * @param haulingMode - Mode determining how cargo is hauled. Defaults to HaulingMode.CONTRACT.
- * @param endLocation - Optional end location for open path routes. If not specified, route returns to origin (closed loop).
- *
- * @remarks
- * - Clears existing containers before loading new ones.
- * - Uses global route optimization to determine a single optimal route for all contracts.
- * - Supports both closed loop (return to origin) and open path (end at specified location) routes.
- * - Loads containers in FILO order (first loaded = last delivered) for efficient unloading.
- * - Logs a warning if cargo cannot be fully loaded due to space constraints.
- */
 export const handleLoadCargo = ({
 	contracts,
 	selectedShip,
 	setContainers,
+	setOptimizedRoute,
 	routeAlgorithm = RouteAlgorithm.NEAREST_NEIGHBOR,
 	haulingMode = HaulingMode.CONTRACT,
+	startLocation,
 	endLocation,
+	locations,
 }: HandleLoadCargoProps) => {
-	// Reset container state
 	setContainers([])
+	setOptimizedRoute?.(null)
 
 	if (contracts.length === 0) {
 		return
 	}
 
-	// Get optimized route with FILO loading order
 	const optimizedRoute = optimizeRoute(contracts, {
 		algorithm: routeAlgorithm,
+		startLocation,
 		endLocation,
+		locations,
 	})
 
-	// Accumulator for placed containers
+	// Store optimized route for UI components that render journey details.
+	setOptimizedRoute?.(optimizedRoute)
+
 	const newContainers: Container[] = []
 
-	// Load cargo according to FILO order (first loaded = last delivered)
 	optimizedRoute.loadingOrder.forEach((loadStop) => {
 		loadStop.cargo.forEach((cargoItem) => {
 			const contract = contracts[cargoItem.contractIndex]
 			let remainingUnits = cargoItem.quantity
+			const isPending = cargoItem.isPending
 
 			while (remainingUnits > 0) {
-				// Pick next container size
 				const containerSize = calculateOptimalContainerSize(
 					contract.maxContainerSize,
 					remainingUnits,
-					haulingMode
+					haulingMode,
 				)
 
-				// Find placement on the ship
 				const result = findNextPosition(
 					containerSize,
 					selectedShip,
-					newContainers
+					newContainers,
 				)
 
-				// Stop if no space left
 				if (!result) {
 					console.warn(
 						`Unable to fit remaining ${remainingUnits} units for ` +
-							`Contract ${cargoItem.contractIndex + 1}, ` +
-							`Delivery to ${loadStop.location}, ` +
-							`Cargo: ${cargoItem.cargoType}`
+						`Contract ${cargoItem.contractIndex + 1}, ` +
+						`${isPending ? 'will pickup at' : 'picked up at'} ${cargoItem.pickupLocation}, ` +
+						`delivering to ${cargoItem.deliveryLocation}, ` +
+						`Cargo: ${cargoItem.cargoType}`,
 					)
 					break
 				}
 
-				// Create container record
 				const newContainer: Container = {
 					size: containerSize,
 					contractIndex: cargoItem.contractIndex,
@@ -98,6 +87,8 @@ export const handleLoadCargo = ({
 					position: result.position,
 					rotated: result.rotated,
 					gridIndex: result.gridIndex,
+					isPending,
+					pickupLocation: cargoItem.pickupLocation,
 				}
 
 				newContainers.push(newContainer)

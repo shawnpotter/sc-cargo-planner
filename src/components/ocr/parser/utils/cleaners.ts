@@ -17,19 +17,19 @@ export const cleanOCRText = (text: string): string => {
 			// Fix OCR confusing D and O in station names
 			.replaceAll(/HO(MS|PC)/g, 'HD$1') // HOMS -> HDMS, HOPC -> HDPC
 
-			// ===== NEW: Handle custom bullet characters =====
+			// Normalize custom bullet characters to the expected marker.
 			// Replace various characters that OCR might read as the custom bullet point
 			// Common misreads include: ©, <, •, ·, ◆, ♦, ○, □, ■, ▪, ▫, ▸, ▹, ►, ▻, and standalone symbols at line start
 			.replaceAll(/^[©<•·◆♦○□■▪▫▸▹►▻]\s+/gm, '◇ ')
 			.replaceAll(/\n[©<•·◆♦○□■▪▫▸▹►▻]\s+/g, '\n◇ ')
 
-			// ===== NEW: Currency symbol normalization =====
+			// Normalize currency symbols in reward lines.
 			// Replace various symbols that might be the ¤ currency symbol
 			// Only replace the FIRST non-whitespace character after "Reward" if it's NOT a digit
 			// Common misreads before numbers: ©, x, ", H, A, *, @, &, §, ^
 			.replaceAll(/Reward\s*([©x"H*@&§^A])\s+(?=\d)/gi, 'Reward ¤ ')
 
-			// ===== NEW: Fix keyword tolerance issues =====
+			// Normalize keyword tokens with trailing OCR punctuation noise.
 			// Handle "Deliver" with trailing punctuation/misreads
 			.replaceAll(/Deliver[!1iI:;,.\s]+(?=\d)/gi, 'Deliver ')
 			.replaceAll(/Collect[!1iI:;,.\s]+(?=\d|\w)/gi, 'Collect ')

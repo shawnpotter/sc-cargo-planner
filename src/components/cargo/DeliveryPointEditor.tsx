@@ -1,6 +1,6 @@
 import React from 'react'
 import { Button } from '@/components/ui/button'
-import { LocationSelect } from '@/components/cargo/LocationSelect'
+import { LocationSearch } from '@/components/cargo/LocationSearch'
 import { CargoInput } from '@/components/cargo/CargoInput'
 import { CurrentCargoList } from '@/components/cargo/CurrentCargoList'
 import type { DeliveryPointValue, CargoEntry } from './types'
@@ -11,6 +11,7 @@ interface DeliveryPointEditorProps {
 	onAddDelivery: () => void
 	onAddCargo: (cargo: CargoEntry) => void
 	onRemoveCargo: (index: number) => void
+	filterSystem?: string
 }
 
 export const DeliveryPointEditor: React.FC<DeliveryPointEditorProps> = ({
@@ -19,6 +20,7 @@ export const DeliveryPointEditor: React.FC<DeliveryPointEditorProps> = ({
 	onAddDelivery,
 	onAddCargo,
 	onRemoveCargo,
+	filterSystem,
 }) => {
 	const [localCargo, setLocalCargo] = React.useState<CargoEntry>({
 		cargoType: '',
@@ -28,10 +30,18 @@ export const DeliveryPointEditor: React.FC<DeliveryPointEditorProps> = ({
 	return (
 		<div className='bg-card border border-primary p-4 rounded shadow-sm flex flex-col gap-4'>
 			<div>
-				<label htmlFor='destination'>Select a destination</label>
-				<LocationSelect
+				<label
+					htmlFor='destination'
+					className='text-sm font-medium'
+				>
+					Select a destination
+				</label>
+				<LocationSearch
+					id='destination'
 					value={value.location}
 					onValueChange={(v) => onChange({ ...value, location: v })}
+					placeholder='Search destination...'
+					filterSystem={filterSystem}
 				/>
 			</div>
 

@@ -20,6 +20,19 @@ If you want to use the SC Cargo Planner, please visit the official website.
 - User settings and account management
 - Modern, terminal-inspired UI
 
+## Map API Integration
+
+The planner now supports loading location data from an external SC Map API through internal proxy routes.
+
+Set these environment variables in your local environment:
+
+- `SCMAP_BASE_URL` - Base URL to the external map API (`http://localhost:3000/api` in development)
+- `SCMAP_API_KEY` - API key sent as `X-API-Key` for upstream requests
+- `SCMAP_DEFAULT_SYSTEM` - Optional default system id (defaults to `stanton`)
+- `SCMAP_EXCLUDED_KINDS` - Optional comma-separated kinds excluded from selectable locations
+
+When the upstream map API is unavailable, the app serves the most recent successful map snapshot from in-memory cache on the server.
+
 ## Contributing
 
 Contributions are welcome for bug fixes, improvements, and new features.  

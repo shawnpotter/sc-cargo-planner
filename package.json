@@ -1,6 +1,6 @@
 {
-	"name": "sc-cargo-planner",
-	"version": "0.2.0",
+	"name": "sc-cargo-planner_version_a",
+	"version": "0.2.1",
 	"private": true,
 	"scripts": {
 		"dev": "next dev --hostname 0.0.0.0 --turbopack",

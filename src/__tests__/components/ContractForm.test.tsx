@@ -14,6 +14,12 @@ import { ContractForm } from '@/components/cargo/ContractForm'
 import { HaulingMode } from '@/utils/calculateContainers'
 import { ContractProvider } from '@/providers/ContractProvider'
 import { CargoProvider } from '@/providers/CargoProvider'
+import {
+	addDraftToCurrentContract,
+	buildBasicDeliveryDraft,
+	saveCurrentContract,
+	setJourneyStartLocation,
+} from './contractFormTestUtils'
 
 // Mock the hooks
 const mockSaveContracts = vi.fn()
@@ -29,6 +35,20 @@ const mockContractAPI = {
 
 vi.mock('@/hooks/useContractAPI', () => ({
 	useContractAPI: () => mockContractAPI,
+}))
+
+// Mock MapDataProvider so ContractForm's useMapData() call works without a provider
+vi.mock('@/providers/MapDataProvider', () => ({
+	useMapData: () => ({
+		locations: [],
+		loading: false,
+		error: null,
+		system: 'stanton',
+		cached: false,
+		availableSystems: ['stanton'],
+		refresh: vi.fn(),
+	}),
+	MapDataProvider: ({ children }: { children: React.ReactNode }) => children,
 }))
 
 // Mock OCR Scanner
@@ -66,6 +86,31 @@ vi.mock('@/components/cargo/LocationSelect', () => ({
 	),
 }))
 
+// Mock LocationSearch (used for start/end location fields)
+vi.mock('@/components/cargo/LocationSearch', () => ({
+	LocationSearch: ({
+		value,
+		onValueChange,
+		placeholder,
+		id,
+	}: {
+		value?: string
+		onValueChange?: (value: string) => void
+		placeholder?: string
+		id?: string
+	}) => (
+		<input
+			data-testid='location-search'
+			id={id}
+			aria-label={placeholder || 'Search locations...'}
+			value={value || ''}
+			placeholder={placeholder}
+			readOnly
+			onChange={(e) => onValueChange?.(e.target.value)}
+		/>
+	),
+}))
+
 // Test wrapper with both ContractProvider and CargoProvider
 const TestWrapper = ({ children }: { children: React.ReactNode }) => (
 	<CargoProvider>
@@ -99,7 +144,7 @@ describe('ContractForm', () => {
 					{...defaultProps}
 					{...props}
 				/>
-			</TestWrapper>
+			</TestWrapper>,
 		)
 	}
 
@@ -109,8 +154,9 @@ describe('ContractForm', () => {
 
 			expect(screen.getByText('Max Container Size (SCU)')).toBeInTheDocument()
 			expect(screen.getByLabelText('Contract Payout')).toBeInTheDocument()
-			expect(screen.getAllByTestId('location-select')[0]).toBeTruthy()
-			expect(screen.getAllByTestId('location-select')[1]).toBeTruthy()
+			expect(screen.getByLabelText('Search starting location...')).toBeTruthy()
+			expect(screen.getByLabelText(/Pickup Location/)).toBeTruthy()
+			expect(screen.getByLabelText('Search destination...')).toBeTruthy()
 			expect(screen.getByLabelText('Cargo Type')).toBeTruthy()
 			expect(screen.getAllByPlaceholderText('Qty')[0]).toBeTruthy()
 		})
@@ -118,7 +164,7 @@ describe('ContractForm', () => {
 		it('should render scan contract button in CONTRACT mode', () => {
 			renderComponent({ haulingMode: HaulingMode.CONTRACT })
 			expect(
-				screen.getAllByRole('button', { name: '📸 Scan Contract' })[0]
+				screen.getAllByRole('button', { name: '📸 Scan Contract' })[0],
 			).toBeTruthy()
 		})
 
@@ -142,7 +188,7 @@ describe('ContractForm', () => {
 			expect(screen.getByRole('button', { name: 'Loop' })).toBeInTheDocument()
 			expect(screen.getByRole('button', { name: 'Path' })).toBeInTheDocument()
 			expect(
-				screen.getByText(/Route will return to the port of origin/)
+				screen.getByText(/Route will return to the port of origin/),
 			).toBeInTheDocument()
 		})
 	})
@@ -156,7 +202,7 @@ describe('ContractForm', () => {
 
 			expect(screen.getByText('End Location')).toBeInTheDocument()
 			expect(
-				screen.getByText(/Route will end at the specified location/)
+				screen.getByText(/Route will end at the specified location/),
 			).toBeInTheDocument()
 		})
 
@@ -178,32 +224,15 @@ describe('ContractForm', () => {
 			renderComponent()
 
 			// Fill form with valid contract
-			const originSelect = screen.getAllByTestId('location-select')[0]
-			fireEvent.change(originSelect, { target: { value: 'Baijini Point' } })
-
-			const destinationSelect = screen.getAllByTestId('location-select')[1]
-			fireEvent.change(destinationSelect, {
-				target: { value: 'Riker Memorial Spaceport' },
+			buildBasicDeliveryDraft({
+				startLocation: 'Baijini Point',
+				origin: 'Baijini Point',
+				destination: 'Riker Memorial Spaceport',
+				cargoType: 'Copper',
+				quantity: 2,
 			})
-
-			const cargoTypeInput = screen.getByLabelText('Cargo Type')
-			const quantityInput = screen.getAllByPlaceholderText('Qty')[0]
-			const addCargoButton = screen.getAllByRole('button', { name: 'Add' })[0]
-
-			fireEvent.change(cargoTypeInput, { target: { value: 'Copper' } })
-			fireEvent.change(quantityInput, { target: { value: '2' } })
-			fireEvent.click(addCargoButton)
-
-			const addToContractButton = screen.getAllByRole('button', {
-				name: 'Add to Contract',
-			})[0]
-			fireEvent.click(addToContractButton)
-
-			// Save contract
-			const saveContractButton = screen.getAllByRole('button', {
-				name: 'Save Contract',
-			})[0]
-			fireEvent.click(saveContractButton)
+			addDraftToCurrentContract()
+			saveCurrentContract()
 
 			// Switch to Path mode without selecting end location
 			const pathButton = screen.getByRole('button', { name: 'Path' })
@@ -223,32 +252,15 @@ describe('ContractForm', () => {
 			renderComponent()
 
 			// Fill form with valid contract
-			const originSelect = screen.getAllByTestId('location-select')[0]
-			fireEvent.change(originSelect, { target: { value: 'Baijini Point' } })
-
-			const destinationSelect = screen.getAllByTestId('location-select')[1]
-			fireEvent.change(destinationSelect, {
-				target: { value: 'Riker Memorial Spaceport' },
+			buildBasicDeliveryDraft({
+				startLocation: 'Baijini Point',
+				origin: 'Baijini Point',
+				destination: 'Riker Memorial Spaceport',
+				cargoType: 'Copper',
+				quantity: 2,
 			})
-
-			const cargoTypeInput = screen.getByLabelText('Cargo Type')
-			const quantityInput = screen.getAllByPlaceholderText('Qty')[0]
-			const addCargoButton = screen.getAllByRole('button', { name: 'Add' })[0]
-
-			fireEvent.change(cargoTypeInput, { target: { value: 'Copper' } })
-			fireEvent.change(quantityInput, { target: { value: '2' } })
-			fireEvent.click(addCargoButton)
-
-			const addToContractButton = screen.getAllByRole('button', {
-				name: 'Add to Contract',
-			})[0]
-			fireEvent.click(addToContractButton)
-
-			// Save contract
-			const saveContractButton = screen.getAllByRole('button', {
-				name: 'Save Contract',
-			})[0]
-			fireEvent.click(saveContractButton)
+			addDraftToCurrentContract()
+			saveCurrentContract()
 
 			// Switch to Path mode
 			const pathButton = screen.getByRole('button', { name: 'Path' })
@@ -259,8 +271,8 @@ describe('ContractForm', () => {
 				expect(screen.getByText('End Location')).toBeInTheDocument()
 			})
 
-			// Find the end location select by its aria-label
-			const endLocationSelect = screen.getByLabelText('Select end location')
+			// Find the end location search input by its aria-label
+			const endLocationSelect = screen.getByLabelText('Search end location...')
 			fireEvent.change(endLocationSelect, {
 				target: { value: 'Everus Harbor' },
 			})
@@ -281,7 +293,8 @@ describe('ContractForm', () => {
 							origin: 'Baijini Point',
 						}),
 					]),
-					'Everus Harbor'
+					'Baijini Point',
+					'Everus Harbor',
 				)
 			})
 		})
@@ -333,24 +346,13 @@ describe('ContractForm', () => {
 
 	describe('Contract Creation', () => {
 		const fillCompleteForm = () => {
-			// Set origin
-			const originSelect = screen.getAllByTestId('location-select')[0]
-			fireEvent.change(originSelect, { target: { value: 'Baijini Point' } })
-
-			// Set destination
-			const destinationSelect = screen.getAllByTestId('location-select')[1]
-			fireEvent.change(destinationSelect, {
-				target: { value: 'Riker Memorial Spaceport' },
+			buildBasicDeliveryDraft({
+				startLocation: 'Baijini Point',
+				origin: 'Baijini Point',
+				destination: 'Riker Memorial Spaceport',
+				cargoType: 'Copper',
+				quantity: 2,
 			})
-
-			// Add cargo
-			const cargoTypeInput = screen.getByLabelText('Cargo Type')
-			const quantityInput = screen.getAllByPlaceholderText('Qty')[0]
-			const addCargoButton = screen.getAllByRole('button', { name: 'Add' })[0]
-
-			fireEvent.change(cargoTypeInput, { target: { value: 'Copper' } })
-			fireEvent.change(quantityInput, { target: { value: '2' } })
-			fireEvent.click(addCargoButton)
 		}
 
 		it('should enable Add to Contract button when form is complete', () => {
@@ -367,8 +369,11 @@ describe('ContractForm', () => {
 			renderComponent()
 
 			// Set origin only
-			const originSelect = screen.getAllByTestId('location-select')[0]
-			fireEvent.change(originSelect, { target: { value: 'Baijini Point' } })
+			setJourneyStartLocation('Baijini Point')
+			const originInput = screen.getByLabelText(/Pickup Location/)
+			fireEvent.change(originInput, {
+				target: { value: 'Baijini Point' },
+			})
 
 			// Add cargo
 			const cargoTypeInput = screen.getByLabelText('Cargo Type')
@@ -383,7 +388,7 @@ describe('ContractForm', () => {
 			const destinationLabel = screen.getByText('Select a destination')
 			const deliverySection = destinationLabel.closest('div')?.parentElement
 			const addToContractButton = within(
-				deliverySection as HTMLElement
+				deliverySection as HTMLElement,
 			).getByRole('button', {
 				name: 'Add to Contract',
 			})
@@ -404,8 +409,32 @@ describe('ContractForm', () => {
 			const currentContractSection =
 				screen.getByText('Current Contract').parentElement
 			expect(currentContractSection).toHaveTextContent(
-				'Riker Memorial Spaceport'
+				'Riker Memorial Spaceport',
 			)
+		})
+
+		it('should default pickup location to selected starting location', () => {
+			renderComponent()
+
+			setJourneyStartLocation('Baijini Point')
+
+			const originInput = screen.getByLabelText(/Pickup Location/)
+			expect(originInput).toHaveValue('Baijini Point')
+		})
+
+		it('should keep manual pickup location when starting location changes', () => {
+			renderComponent()
+
+			setJourneyStartLocation('Baijini Point')
+
+			const originInput = screen.getByLabelText(/Pickup Location/)
+			fireEvent.change(originInput, {
+				target: { value: 'Port Tressler' },
+			})
+
+			setJourneyStartLocation('Everus Harbor')
+
+			expect(originInput).toHaveValue('Port Tressler')
 		})
 	})
 
@@ -414,32 +443,15 @@ describe('ContractForm', () => {
 			renderComponent()
 
 			// Fill and add contract
-			const originSelect = screen.getAllByTestId('location-select')[0]
-			fireEvent.change(originSelect, { target: { value: 'Baijini Point' } })
-
-			const destinationSelect = screen.getAllByTestId('location-select')[1]
-			fireEvent.change(destinationSelect, {
-				target: { value: 'Riker Memorial Spaceport' },
+			buildBasicDeliveryDraft({
+				startLocation: 'Baijini Point',
+				origin: 'Baijini Point',
+				destination: 'Riker Memorial Spaceport',
+				cargoType: 'Copper',
+				quantity: 2,
 			})
-
-			const cargoTypeInput = screen.getByLabelText('Cargo Type')
-			const quantityInput = screen.getAllByPlaceholderText('Qty')[0]
-			const addCargoButton = screen.getAllByRole('button', { name: 'Add' })[0]
-
-			fireEvent.change(cargoTypeInput, { target: { value: 'Copper' } })
-			fireEvent.change(quantityInput, { target: { value: '2' } })
-			fireEvent.click(addCargoButton)
-
-			const addToContractButton = screen.getAllByRole('button', {
-				name: 'Add to Contract',
-			})[0]
-			fireEvent.click(addToContractButton)
-
-			// Save contract
-			const saveContractButton = screen.getAllByRole('button', {
-				name: 'Save Contract',
-			})[0]
-			fireEvent.click(saveContractButton)
+			addDraftToCurrentContract()
+			saveCurrentContract()
 
 			// Submit
 			const submitButton = screen.getAllByRole('button', {
@@ -459,44 +471,34 @@ describe('ContractForm', () => {
 							]),
 						}),
 					]),
-					undefined // endLocation is undefined for loop routes
+					'Baijini Point',
+					undefined, // endLocation is undefined for loop routes
 				)
 			})
 		})
 
-		it('should show alert when submitting with no contracts', async () => {
+		it('should submit successfully when submitting with unsaved current contract', async () => {
 			renderComponent()
 
 			// Populate current contract but do not save to saved contracts
-			const originSelect = screen.getAllByTestId('location-select')[0]
-			fireEvent.change(originSelect, { target: { value: 'Baijini Point' } })
-
-			const destinationSelect = screen.getAllByTestId('location-select')[1]
-			fireEvent.change(destinationSelect, {
-				target: { value: 'Riker Memorial Spaceport' },
+			buildBasicDeliveryDraft({
+				startLocation: 'Baijini Point',
+				origin: 'Baijini Point',
+				destination: 'Riker Memorial Spaceport',
+				cargoType: 'Copper',
+				quantity: 2,
 			})
-
-			const cargoTypeInput = screen.getByLabelText('Cargo Type')
-			const quantityInput = screen.getAllByPlaceholderText('Qty')[0]
-			const addCargoButton = screen.getAllByRole('button', { name: 'Add' })[0]
-
-			fireEvent.change(cargoTypeInput, { target: { value: 'Copper' } })
-			fireEvent.change(quantityInput, { target: { value: '2' } })
-			fireEvent.click(addCargoButton)
-
-			const addToContractButton = screen.getAllByRole('button', {
-				name: 'Add to Contract',
-			})[0]
-			fireEvent.click(addToContractButton)
+			addDraftToCurrentContract()
 
 			const submitButton = screen.getAllByRole('button', {
 				name: /Generate Layout/i,
 			})[0]
 			fireEvent.click(submitButton)
 
-			// Alert title should appear
-			const title = await screen.findByText('No valid contracts')
-			expect(title).toBeTruthy()
+			// The form should submit successfully because the unsaved current contract is saved during submission
+			await waitFor(() => {
+				expect(mockOnSubmit).toHaveBeenCalled()
+			})
 		})
 	})
 
@@ -532,7 +534,7 @@ describe('ContractForm', () => {
 			fireEvent.click(scanButton)
 
 			const alertText = await screen.findByText(
-				'Scanner not available on mobile'
+				'Scanner not available on mobile',
 			)
 			expect(alertText).toBeTruthy()
 		})
@@ -563,7 +565,7 @@ describe('ContractForm', () => {
 			// Should be back to Loop mode
 			expect(screen.queryByText('End Location')).not.toBeInTheDocument()
 			expect(
-				screen.getByText(/Route will return to the port of origin/)
+				screen.getByText(/Route will return to the port of origin/),
 			).toBeInTheDocument()
 		})
 	})

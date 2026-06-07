@@ -2,7 +2,7 @@
 import React from 'react'
 import { cn } from '@/lib/utils'
 import { RouteType } from '@/providers/CargoProvider'
-import { LocationSelect } from '@/components/cargo/LocationSelect'
+import { LocationSearch } from '@/components/cargo/LocationSearch'
 
 interface RouteTypeToggleProps {
 	currentType: RouteType
@@ -10,6 +10,7 @@ interface RouteTypeToggleProps {
 	onTypeChange: (type: RouteType) => void
 	onEndLocationChange: (location: string | null) => void
 	className?: string
+	filterSystem?: string
 }
 
 /**
@@ -28,7 +29,8 @@ function RouteTypeToggle({
 	onTypeChange,
 	onEndLocationChange,
 	className,
-}: RouteTypeToggleProps) {
+	filterSystem,
+}: Readonly<RouteTypeToggleProps>) {
 	return (
 		<div className={cn('flex flex-col gap-3', className)}>
 			<div className='flex items-center gap-2'>
@@ -71,10 +73,12 @@ function RouteTypeToggle({
 					>
 						End Location
 					</label>
-					<LocationSelect
+					<LocationSearch
+						id='endLocation'
 						value={endLocation || ''}
 						onValueChange={(value) => onEndLocationChange(value || null)}
-						placeholder='Select end location'
+						placeholder='Search end location...'
+						filterSystem={filterSystem}
 					/>
 				</div>
 			)}

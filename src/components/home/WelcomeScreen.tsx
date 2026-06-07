@@ -1,6 +1,6 @@
 // app/components/WelcomeScreen.tsx
 'use client'
-import React, { useState } from 'react'
+import React, { useEffect, useMemo, useState } from 'react'
 import { signIn } from 'next-auth/react'
 // Removed TerminalPanel
 import { AuthOptions } from '@/components/auth/AuthOptions'
@@ -10,6 +10,8 @@ import { SignUpForm } from '@/components/auth/SignUpForm'
 interface WelcomeScreenProps {
 	readonly onContinue: (authenticated: boolean) => void
 }
+
+type ApiStatus = 'checking' | 'online' | 'degraded' | 'offline'
 
 /**
  * Renders the welcome screen for the Universal Cargo Management System (UCMS).
@@ -26,6 +28,84 @@ function WelcomeScreen({ onContinue }: WelcomeScreenProps) {
 	const [showSignIn, setShowSignIn] = useState(false)
 	const [showSignUp, setShowSignUp] = useState(false)
 	const [error, setError] = useState('')
+	const [apiStatus, setApiStatus] = useState<ApiStatus>('checking')
+	const [lastCheckedAt, setLastCheckedAt] = useState<string | null>(null)
+
+	useEffect(() => {
+		let isMounted = true
+
+		const checkApiStatus = async () => {
+			try {
+				const response = await fetch('/api/map/locations', {
+					cache: 'no-store',
+				})
+				if (!isMounted) {
+					return
+				}
+
+				if (!response.ok) {
+					setApiStatus('offline')
+					setLastCheckedAt(new Date().toISOString())
+					return
+				}
+
+				const json = (await response.json()) as {
+					meta?: { cached?: boolean; fetchedAt?: string }
+				}
+				setApiStatus(json.meta?.cached ? 'degraded' : 'online')
+				setLastCheckedAt(json.meta?.fetchedAt ?? new Date().toISOString())
+			} catch {
+				if (!isMounted) {
+					return
+				}
+				setApiStatus('offline')
+				setLastCheckedAt(new Date().toISOString())
+			}
+		}
+
+		void checkApiStatus()
+		const intervalId = window.setInterval(() => {
+			void checkApiStatus()
+		}, 30000)
+
+		return () => {
+			isMounted = false
+			window.clearInterval(intervalId)
+		}
+	}, [])
+
+	const statusCopy = useMemo(() => {
+		switch (apiStatus) {
+			case 'online':
+				return {
+					heading: 'System Ready',
+					detail: 'Live map API connected',
+					color: 'text-emerald-500',
+					dotColor: 'bg-emerald-500',
+				}
+			case 'degraded':
+				return {
+					heading: 'System Ready (Cached Data)',
+					detail: 'Map API unavailable, using last successful sync',
+					color: 'text-amber-500',
+					dotColor: 'bg-amber-500',
+				}
+			case 'offline':
+				return {
+					heading: 'System Degraded',
+					detail: 'Map API offline and no fresh sync available',
+					color: 'text-destructive',
+					dotColor: 'bg-destructive',
+				}
+			default:
+				return {
+					heading: 'Initializing system components...',
+					detail: 'Checking map API status',
+					color: 'text-foreground',
+					dotColor: 'bg-muted-foreground',
+				}
+		}
+	}, [apiStatus])
 
 	const handleSignIn = () => {
 		if (authDisabled) {
@@ -81,20 +161,7 @@ function WelcomeScreen({ onContinue }: WelcomeScreenProps) {
 		onContinue(false)
 	}
 
-	// UI logic to switch between forms
-	const formContent = showSignIn ? (
-		<SignInForm
-			onSubmit={handleSignInSubmit}
-			onCancel={handleCancel}
-			disabled={authDisabled}
-		/>
-	) : showSignUp ? (
-		<SignUpForm
-			onSubmit={() => {}}
-			onCancel={handleCancel}
-			disabled={authDisabled}
-		/>
-	) : (
+	let formContent = (
 		<AuthOptions
 			onSignIn={handleSignIn}
 			onSignUp={handleSignUp}
@@ -102,6 +169,24 @@ function WelcomeScreen({ onContinue }: WelcomeScreenProps) {
 			authDisabled={authDisabled}
 		/>
 	)
+
+	if (showSignIn) {
+		formContent = (
+			<SignInForm
+				onSubmit={handleSignInSubmit}
+				onCancel={handleCancel}
+				disabled={authDisabled}
+			/>
+		)
+	} else if (showSignUp) {
+		formContent = (
+			<SignUpForm
+				onSubmit={() => {}}
+				onCancel={handleCancel}
+				disabled={authDisabled}
+			/>
+		)
+	}
 
 	return (
 		<div className='min-h-screen flex flex-col items-center justify-center bg-background px-4 py-8'>
@@ -145,11 +230,22 @@ function WelcomeScreen({ onContinue }: WelcomeScreenProps) {
 									/>
 								</svg>
 							</div>
+							<div className='mt-1 flex items-center gap-2 text-xs text-foreground/80'>
+								<span
+									className={`inline-block h-2 w-2 rounded-full ${statusCopy.dotColor}`}
+								/>
+								<span>API Status: {apiStatus.toUpperCase()}</span>
+								{lastCheckedAt && (
+									<span className='opacity-80'>
+										Last check: {new Date(lastCheckedAt).toLocaleTimeString()}
+									</span>
+								)}
+							</div>
 							<p className='text-foreground text-sm font-mono tracking-wide'>
-								Initializing system components...
+								{statusCopy.detail}
 							</p>
-							<p className='text-secondary font-semibold tracking-wider'>
-								System Ready
+							<p className={`font-semibold tracking-wider ${statusCopy.color}`}>
+								{statusCopy.heading}
 							</p>
 						</div>
 					</div>

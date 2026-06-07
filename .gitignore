@@ -46,3 +46,4 @@ contract_examples/
 *.traineddata
 
 package-lock.json
+*.ctm

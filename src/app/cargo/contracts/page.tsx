@@ -20,6 +20,7 @@ import {
 } from '@/components/ui/alert-dialog'
 import { CubeIcon } from '@heroicons/react/24/outline'
 import { useState } from 'react'
+import { useMapData } from '@/providers/MapDataProvider'
 
 export default function ContractsPage() {
 	const { navigateTo } = useCargoNavigation()
@@ -30,8 +31,17 @@ export default function ContractsPage() {
 		setContainers,
 		setRouteType,
 		setEndLocation,
+		setStartLocation,
+		setOptimizedRoute,
+		resetStopStatuses,
 	} = useCargo()
 	const { contracts, clearContracts } = useContracts()
+	const {
+		locations,
+		loading: mapLoading,
+		error: mapError,
+		cached,
+	} = useMapData()
 	const [alertOpen, setAlertOpen] = useState(false)
 	const [alertTitle, setAlertTitle] = useState('')
 	const [alertDescription, setAlertDescription] = useState('')
@@ -42,21 +52,49 @@ export default function ContractsPage() {
 		setContainers([])
 		setRouteType('loop')
 		setEndLocation(null)
+		setStartLocation(null)
+		setOptimizedRoute(null)
+		resetStopStatuses()
 	}
 
 	const handleContractSubmit = (
 		newContracts: Contract[],
+		startLocation?: string,
 		endLocation?: string,
 	) => {
+		if (mapLoading) {
+			setAlertTitle('Map locations still loading')
+			setAlertDescription(
+				'Please wait for map location data to finish loading before generating a route.',
+			)
+			setAlertOpen(true)
+			return
+		}
+
+		if (mapError || locations.length === 0) {
+			setAlertTitle('Map locations unavailable')
+			setAlertDescription(
+				mapError ||
+					'No map locations were returned. Confirm the Map API is configured and reachable.',
+			)
+			setAlertOpen(true)
+			return
+		}
+
 		if (selectedShip) {
-			// Load the cargo and navigate to main cargo view
+			// Reset stop statuses before generating new layout
+			resetStopStatuses()
+
 			handleLoadCargo({
 				contracts: newContracts,
 				selectedShip,
 				setContainers,
+				setOptimizedRoute,
 				routeAlgorithm: RouteAlgorithm.A_STAR,
 				haulingMode,
+				startLocation,
 				endLocation,
+				locations,
 			})
 			navigateTo('/cargo')
 		} else {
@@ -73,6 +111,9 @@ export default function ContractsPage() {
 		setContainers([])
 		setRouteType('loop')
 		setEndLocation(null)
+		setStartLocation(null)
+		setOptimizedRoute(null)
+		resetStopStatuses()
 	}
 
 	if (!selectedShip) {
@@ -101,6 +142,12 @@ export default function ContractsPage() {
 		<div className='min-h-screen flex flex-col bg-background text-foreground'>
 			<div className='flex-1 p-4'>
 				<div className='max-w-4xl mx-auto'>
+					{cached && (
+						<div className='mb-4 rounded border border-yellow-600/40 bg-yellow-500/10 px-3 py-2 text-sm text-yellow-700'>
+							Using cached map data because the upstream map API is currently
+							unavailable.
+						</div>
+					)}
 					<div className='mb-6 flex flex-col md:flex-row items-center justify-between'>
 						<h1 className='text-3xl font-bold mb-2'>Configure Contracts</h1>
 						<HaulingModeToggle

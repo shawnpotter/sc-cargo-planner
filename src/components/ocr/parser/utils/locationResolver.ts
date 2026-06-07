@@ -1,12 +1,50 @@
-import { locations } from '@/data/locations'
+import { getKnownLocationNames } from '@/lib/map/runtime'
 import { LOCATION_PATTERNS } from '../constants/patterns'
 import { HUR_L_STATIONS } from '../constants/locations'
 
-// Get all location names from the locations file
-const KNOWN_LOCATIONS = locations
-	.filter((loc) => loc.isSelectable !== false) // Only include if explicitly selectable or undefined
-	.map((loc) => loc.name)
-	.sort((a, b) => b.length - a.length)
+function getKnownLocations(): string[] {
+	return getKnownLocationNames()
+}
+
+const LOCATION_ALIASES: Record<string, string> = {
+	area18: 'Riker Memorial Spaceport',
+	'area 18': 'Riker Memorial Spaceport',
+	'area l8': 'Riker Memorial Spaceport',
+	areal8: 'Riker Memorial Spaceport',
+	'nb int spaceport': 'New Babbage Interstellar Spaceport',
+	'nb intl spaceport': 'New Babbage Interstellar Spaceport',
+	'nb interstellar spaceport': 'New Babbage Interstellar Spaceport',
+}
+
+const normalizeForAliasLookup = (value: string): string => {
+	return value
+		.toLowerCase()
+		.replaceAll(/[^a-z0-9\s]/g, ' ')
+		.replaceAll(/\barea\s*l8\b/g, 'area 18')
+		.replaceAll(/\bareal8\b/g, 'area18')
+		.replaceAll(/\s+/g, ' ')
+		.trim()
+}
+
+const resolveLocationAlias = (value: string): string | null => {
+	const normalizedValue = normalizeForAliasLookup(value)
+	if (!normalizedValue) {
+		return null
+	}
+
+	if (LOCATION_ALIASES[normalizedValue]) {
+		return LOCATION_ALIASES[normalizedValue]
+	}
+
+	const padded = ` ${normalizedValue} `
+	for (const [alias, canonical] of Object.entries(LOCATION_ALIASES)) {
+		if (padded.includes(` ${alias} `)) {
+			return canonical
+		}
+	}
+
+	return null
+}
 
 /**
  * Parse a destination string and resolve to the best match
@@ -18,12 +56,17 @@ export function parseDestinationName(destinationRaw: string): string {
 	// Remove trailing periods, spaces, pipes
 	cleaned = cleaned.replace(/[.\s|]+$/, '')
 
+	const aliasMatch = resolveLocationAlias(cleaned)
+	if (aliasMatch) {
+		return aliasMatch
+	}
+
 	// First check if it matches known patterns (HDMS-X, HOMS-X, etc.)
 	// Fix common OCR issues where HDMS is read as HOMS
 	cleaned = cleaned.replaceAll(/HOMS-/gi, 'HDMS-')
 
 	// Handle HDMS- or HDPC- patterns with or without space after the dash
-	const miningStationMatch = cleaned.match(/HD(MS|PC)-\s*([A-Za-z]+)/i)
+	const miningStationMatch = /HD(MS|PC)-\s*([A-Z]+)/i.exec(cleaned)
 	if (miningStationMatch) {
 		const type = miningStationMatch[1].toUpperCase()
 		const name =
@@ -41,7 +84,7 @@ export function parseDestinationName(destinationRaw: string): string {
 
 	// Handle depot names (S4LD01, etc.)
 	if (/S\dLD\d{2}/i.test(cleaned)) {
-		const depotMatch = cleaned.match(/S\dLD\d{2}/i)
+		const depotMatch = /S\dLD\d{2}/i.exec(cleaned)
 		if (depotMatch) {
 			// Fix common OCR issue S4LD00 -> S4LD01
 			const depot = depotMatch[0].toUpperCase()
@@ -54,7 +97,7 @@ export function parseDestinationName(destinationRaw: string): string {
 
 	// Handle full depot names
 	if (/logistics\s+depot/i.test(cleaned)) {
-		const depotMatch = cleaned.match(/(S\dLD\d{2})/i)
+		const depotMatch = /(S\dLD\d{2})/i.exec(cleaned)
 		if (depotMatch) {
 			const depot = depotMatch[1].toUpperCase()
 			if (depot === 'S4LD00') {
@@ -65,15 +108,15 @@ export function parseDestinationName(destinationRaw: string): string {
 	}
 
 	// Check for L-point references
-	const lPointMatch = cleaned.match(
-		/at\s+Hurston['']s\s+L(\d)\s+Lagrange\s+point/i
+	const lPointMatch = /at\s+Hurston'?s\s+L(\d)\s+Lagrange\s+point/i.exec(
+		cleaned,
 	)
 	if (lPointMatch) {
 		const lPoint = lPointMatch[1]
 
 		// Extract the station name before the L-point reference
-		const stationNameMatch = cleaned.match(
-			/^(.*?)\s+(?:Station\s+)?at\s+Hurston/i
+		const stationNameMatch = /^(.*?)\s+(?:Station\s+)?at\s+Hurston/i.exec(
+			cleaned,
 		)
 		if (stationNameMatch) {
 			const stationName = stationNameMatch[1].toLowerCase().trim()
@@ -143,9 +186,16 @@ export function findBestLocationMatch(text: string): string | null {
 		.replaceAll(/\s+/g, ' ')
 		.replaceAll(/\.$/g, '')
 
+	const aliasMatch = resolveLocationAlias(cleanText)
+	if (aliasMatch) {
+		return aliasMatch
+	}
+
+	const knownLocations = getKnownLocations()
+
 	// First try exact match
-	const exactMatch = KNOWN_LOCATIONS.find(
-		(loc) => loc.toLowerCase() === cleanText
+	const exactMatch = knownLocations.find(
+		(loc) => loc.toLowerCase() === cleanText,
 	)
 	if (exactMatch) {
 		return exactMatch
@@ -154,7 +204,7 @@ export function findBestLocationMatch(text: string): string | null {
 	// Try partial matches only if the input is substantial enough
 	if (cleanText.length >= 5) {
 		// Minimum length for partial matching
-		for (const location of KNOWN_LOCATIONS) {
+		for (const location of knownLocations) {
 			const locLower = location.toLowerCase()
 
 			// Only match if it's a significant portion of the location name
@@ -165,11 +215,6 @@ export function findBestLocationMatch(text: string): string | null {
 					locLower.split(' ').length > 2
 				) {
 					continue // Skip single word matches for multi-word locations
-				}
-
-				// Verify this location is actually selectable
-				const locationData = locations.find((l) => l.name === location)
-				if (locationData?.isSelectable === false) {
 				}
 
 				return location

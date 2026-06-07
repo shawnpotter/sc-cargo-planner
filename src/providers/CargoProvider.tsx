@@ -9,9 +9,10 @@ import React, {
 	useMemo,
 	useEffect,
 } from 'react'
-import { Ship, Container } from '@/constants/types'
+import { Ship, Container, StopStatus } from '@/constants/types'
 import { HaulingMode } from '@/utils/calculateContainers'
 import { ships } from '@/data/ships'
+import { OptimizedRoute } from '@/utils/routeOptimizer'
 
 export type RouteType = 'loop' | 'path'
 
@@ -21,6 +22,9 @@ interface CargoProviderType {
 	haulingMode: HaulingMode
 	routeType: RouteType
 	endLocation: string | null
+	startLocation: string | null
+	optimizedRoute: OptimizedRoute | null
+	stopStatuses: Record<string, StopStatus>
 
 	// Ship management
 	setSelectedShip: (ship: Ship | null) => void
@@ -35,6 +39,13 @@ interface CargoProviderType {
 	// Route type management
 	setRouteType: (type: RouteType) => void
 	setEndLocation: (location: string | null) => void
+	setStartLocation: (location: string | null) => void
+	setOptimizedRoute: (route: OptimizedRoute | null) => void
+
+	// Stop status management
+	setStopStatus: (location: string, status: StopStatus) => void
+	cycleStopStatus: (location: string) => void
+	resetStopStatuses: () => void
 
 	// Reset all cargo data
 	resetCargo: () => void
@@ -43,80 +54,68 @@ interface CargoProviderType {
 const CargoContext = createContext<CargoProviderType | undefined>(undefined)
 
 /**
- * Provides cargo management functionality for the application.
- *
- * The `CargoProvider` component manages the selected ship, container layout,
- * hauling mode, and route configuration across different cargo-related pages.
- * It provides a centralized state management solution for cargo operations
- * with localStorage persistence.
- *
- * @param children - React children to be rendered within the provider.
- *
- * @context
- * Provides the following context value:
- * - `selectedShip`: Currently selected ship for cargo operations (persisted in localStorage)
- * - `containers`: Array of containers currently loaded in the cargo hold
- * - `haulingMode`: Current hauling mode (CONTRACT, MULTI_TOOL, etc.)
- * - `routeType`: Current route type ('loop' for closed loop, 'path' for open path)
- * - `endLocation`: End location for open path routes (null for closed loop)
- * - `setSelectedShip(ship)`: Sets the currently selected ship and saves to localStorage
- * - `setContainers(containers)`: Sets the container layout
- * - `clearContainers()`: Clears all containers from the cargo hold
- * - `setHaulingMode(mode)`: Sets the hauling mode
- * - `setRouteType(type)`: Sets the route type (loop or path)
- * - `setEndLocation(location)`: Sets the end location for open path routes
- * - `resetCargo()`: Resets all cargo-related state
+ * Cycles through stop statuses: idle → in-progress → completed → idle
  */
+function getNextStatus(current: StopStatus): StopStatus {
+	switch (current) {
+		case 'idle':
+			return 'in-progress'
+		case 'in-progress':
+			return 'completed'
+		case 'completed':
+			return 'idle'
+	}
+}
+
 function CargoProvider({ children }: Readonly<{ children: React.ReactNode }>) {
-	// State management
-	const [selectedShip, setSelectedShipState] = useState<Ship | null>(null)
+	const [selectedShip, setSelectedShip] = useState<Ship | null>(null)
 	const [containers, setContainers] = useState<Container[]>([])
 	const [haulingMode, setHaulingMode] = useState<HaulingMode>(
 		HaulingMode.CONTRACT,
 	)
 	const [routeType, setRouteType] = useState<RouteType>('loop')
 	const [endLocation, setEndLocation] = useState<string | null>(null)
+	const [startLocation, setStartLocation] = useState<string | null>(null)
+	const [optimizedRoute, setOptimizedRoute] = useState<OptimizedRoute | null>(
+		null,
+	)
+	const [stopStatuses, setStopStatuses] = useState<Record<string, StopStatus>>(
+		{},
+	)
 
-	// Load selected ship from localStorage on mount
 	useEffect(() => {
 		if (typeof window === 'undefined') return
 		try {
 			const saved = localStorage.getItem('cargo-selected-ship')
 			if (saved) {
 				const shipName = JSON.parse(saved)
-				// Find the ship by name from the ships array
 				const ship = ships.find((s) => s.name === shipName)
 				if (ship) {
-					setSelectedShipState(ship)
+					setSelectedShip(ship)
 				}
 			}
 		} catch (error) {
 			console.warn('Failed to load selected ship from localStorage:', error)
 		}
-	}, [setSelectedShipState])
+	}, [])
 
-	// Custom setter that also saves to localStorage
-	const setSelectedShip = useCallback(
-		(ship: Ship | null) => {
-			setSelectedShipState(ship)
-			try {
-				if (ship) {
-					localStorage.setItem('cargo-selected-ship', JSON.stringify(ship.name))
-				} else {
-					localStorage.removeItem('cargo-selected-ship')
-				}
-			} catch (error) {
-				console.warn('Failed to save selected ship to localStorage:', error)
+	const handleSetSelectedShip = useCallback((ship: Ship | null) => {
+		setSelectedShip(ship)
+		try {
+			if (ship) {
+				localStorage.setItem('cargo-selected-ship', JSON.stringify(ship.name))
+			} else {
+				localStorage.removeItem('cargo-selected-ship')
 			}
-		},
-		[setSelectedShipState],
-	)
+		} catch (error) {
+			console.warn('Failed to save selected ship to localStorage:', error)
+		}
+	}, [])
 
 	const clearContainers = useCallback(() => {
 		setContainers([])
 	}, [])
 
-	// When route type changes to loop, clear end location
 	const handleSetRouteType = useCallback((type: RouteType) => {
 		setRouteType(type)
 		if (type === 'loop') {
@@ -124,27 +123,68 @@ function CargoProvider({ children }: Readonly<{ children: React.ReactNode }>) {
 		}
 	}, [])
 
+	const setStopStatus = useCallback((location: string, status: StopStatus) => {
+		setStopStatuses((prev) => ({
+			...prev,
+			[location]: status,
+		}))
+	}, [])
+
+	const cycleStopStatus = useCallback((location: string) => {
+		setStopStatuses((prev) => {
+			const currentStatus = prev[location] || 'idle'
+			return {
+				...prev,
+				[location]: getNextStatus(currentStatus),
+			}
+		})
+	}, [])
+
+	const resetStopStatuses = useCallback(() => {
+		setStopStatuses({})
+	}, [])
+
 	const resetCargo = useCallback(() => {
-		setSelectedShip(null)
+		handleSetSelectedShip(null)
 		setContainers([])
 		setHaulingMode(HaulingMode.CONTRACT)
 		setRouteType('loop')
 		setEndLocation(null)
-	}, [setSelectedShip])
+		setStartLocation(null)
+		setOptimizedRoute(null)
+		setStopStatuses({})
+	}, [handleSetSelectedShip])
 
-	// Effect to sync localStorage when ships data might change (for development)
+	// Reset stop statuses whenever a new route is generated
+	useEffect(() => {
+		setStopStatuses({})
+	}, [optimizedRoute])
+
+	// Reset stop statuses whenever a new route is generated
+	useEffect(() => {
+		setStopStatuses({})
+	}, [optimizedRoute])
+
 	useEffect(() => {
 		if (
 			selectedShip &&
-			!ships.find((ship) => ship.name === selectedShip.name)
+			!ships.some((ship) => ship.name === selectedShip.name)
 		) {
-			// Selected ship no longer exists in ships data, clear it
 			console.warn(
 				`Selected ship "${selectedShip.name}" no longer exists, clearing selection`,
 			)
-			setSelectedShip(null)
+			handleSetSelectedShip(null)
 		}
-	}, [selectedShip, setSelectedShip])
+	}, [selectedShip, handleSetSelectedShip])
+
+	useEffect(() => {
+		if (!selectedShip) return
+
+		const latestShip = ships.find((ship) => ship.name === selectedShip.name)
+		if (latestShip && latestShip !== selectedShip) {
+			setSelectedShip(latestShip)
+		}
+	}, [selectedShip])
 
 	const value: CargoProviderType = useMemo(
 		() => ({
@@ -153,12 +193,20 @@ function CargoProvider({ children }: Readonly<{ children: React.ReactNode }>) {
 			haulingMode,
 			routeType,
 			endLocation,
-			setSelectedShip,
+			startLocation,
+			optimizedRoute,
+			stopStatuses,
+			setSelectedShip: handleSetSelectedShip,
 			setContainers,
 			clearContainers,
 			setHaulingMode,
 			setRouteType: handleSetRouteType,
 			setEndLocation,
+			setStartLocation,
+			setOptimizedRoute,
+			setStopStatus,
+			cycleStopStatus,
+			resetStopStatuses,
 			resetCargo,
 		}),
 		[
@@ -167,9 +215,15 @@ function CargoProvider({ children }: Readonly<{ children: React.ReactNode }>) {
 			haulingMode,
 			routeType,
 			endLocation,
-			setSelectedShip,
+			startLocation,
+			optimizedRoute,
+			stopStatuses,
+			handleSetSelectedShip,
 			clearContainers,
 			handleSetRouteType,
+			setStopStatus,
+			cycleStopStatus,
+			resetStopStatuses,
 			resetCargo,
 		],
 	)
@@ -185,4 +239,4 @@ function useCargo() {
 	return context
 }
 
-export { CargoProvider, useCargo }
+export { CargoProvider, useCargo, getNextStatus }

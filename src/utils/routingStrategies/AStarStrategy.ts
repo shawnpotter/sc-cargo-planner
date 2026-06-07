@@ -70,9 +70,9 @@ export class AStarStrategy implements IRoutingStrategy {
 		while (remainingDestinations.length > 0) {
 			const nextDestination = remainingDestinations[0]
 			// If the destination requires a planetary visit and its parent planet
-			// isn't in the current route yet, route to the planet first.
+			// is not the current location yet, route to the planet first.
 			const parentPlanet = graph.getPlanetaryConstraint(nextDestination)
-			if (parentPlanet && !route.includes(parentPlanet)) {
+			if (parentPlanet && current !== parentPlanet) {
 				// find path to parent planet first
 				const pathToPlanet = this.findPathToDestination(
 					current,

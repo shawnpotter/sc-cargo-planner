@@ -7,16 +7,17 @@ export interface Location {
 		z: number
 	}
 	type:
-		| 'PLANET'
-		| 'MOON'
-		| 'SURFACE_LOCATION'
-		| 'ORBITAL_STATION'
-		| 'LAGRANGE_POINT_STATION'
-		| 'GATEWAY'
-		| 'STAR'
+	| 'PLANET'
+	| 'MOON'
+	| 'SURFACE_LOCATION'
+	| 'ORBITAL_STATION'
+	| 'LAGRANGE_POINT_STATION'
+	| 'GATEWAY'
+	| 'STAR'
 	parentObject?: string // Optional property for parent planet name
 	requiresPlanetaryVisit?: boolean
 	isSelectable?: boolean // Add this property to control dropdown visibility
+	system?: string // Which star system this location belongs to (e.g. 'stanton', 'pyro')
 }
 
 /* Blank Location Entry

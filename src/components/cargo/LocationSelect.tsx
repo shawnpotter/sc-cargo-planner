@@ -1,7 +1,8 @@
 // @/components/cargo/LocationSelect.tsx
 import * as React from 'react'
 import { useMemo, useState } from 'react'
-import { locations, getSelectableLocations } from '@/data/locations'
+import type { Location } from '@/data/locations'
+import { useMapData } from '@/providers/MapDataProvider'
 
 import {
 	Select,
@@ -13,86 +14,89 @@ import {
 	SelectValue,
 } from '@/components/ui/select'
 
+type PlanetGroup = {
+	label: string
+	direct: Location[]
+	moons: Array<{ moon?: Location; children: Location[] }>
+}
+
+function buildLookup(allLocations: Location[]): Map<string, Location> {
+	const lookup = new Map<string, Location>()
+	for (const loc of allLocations) lookup.set(loc.name, loc)
+	return lookup
+}
+
+function findTopParent(loc: Location, lookup: Map<string, Location>): Location {
+	let current = loc
+	while (current.parentObject) {
+		const parent = lookup.get(current.parentObject)
+		if (!parent) break
+		if (parent.type === 'PLANET' || parent.type === 'STAR') return parent
+		current = parent
+	}
+	if (loc.parentObject) return lookup.get(loc.parentObject) ?? loc
+	return loc
+}
+
+function placeInGroup(
+	l: Location,
+	planetMap: Map<string, PlanetGroup>,
+	lookup: Map<string, Location>,
+): void {
+	const top = findTopParent(l, lookup)
+	const topName = top.name || l.parentObject || l.type || 'Other'
+
+	if (!planetMap.has(topName))
+		planetMap.set(topName, { label: topName, direct: [], moons: [] })
+
+	const group = planetMap.get(topName)!
+
+	if (l.type === 'MOON') {
+		group.moons.push({ moon: l, children: [] })
+		return
+	}
+
+	if (l.parentObject) {
+		const parent = lookup.get(l.parentObject)
+		if (parent?.type === 'MOON') {
+			let moonBucket = group.moons.find((m) => m.moon?.name === parent.name)
+			if (!moonBucket) {
+				moonBucket = { moon: parent, children: [] }
+				group.moons.push(moonBucket)
+			}
+			moonBucket.children.push(l)
+			return
+		}
+	}
+
+	group.direct.push(l)
+}
+
 // Groups and filters locations.
 // Returns an array of [groupLabel, locations[]] sorted by groupLabel.
 const groupAndFilterLocations = (
-	locs: ReturnType<typeof getSelectableLocations>,
+	locs: Location[],
+	allLocations: Location[],
 	query: string,
 ) => {
 	const q = query.trim().toLowerCase()
 
 	const filtered = q
 		? locs.filter((l) => {
-				const name = (l.name || '').toString().toLowerCase()
-				const parent = (l.parentObject || '').toString().toLowerCase()
-				const type = (l.type || '').toString().toLowerCase()
+				const name = (l.name || '').toLowerCase()
+				const parent = (l.parentObject || '').toLowerCase()
+				const type = (l.type || '').toLowerCase()
 				return name.includes(q) || parent.includes(q) || type.includes(q)
 			})
 		: locs.slice()
 
-	// Build a lookup of all locations (including non-selectable) so we can
-	// resolve parent chains (planet -> moon -> child)
-	const lookup = new Map<string, (typeof locations)[0]>()
-	for (const loc of locations) lookup.set(loc.name, loc)
-
-	type PlanetGroup = {
-		label: string
-		direct: typeof filtered
-		moons: Array<{ moon?: (typeof locations)[0]; children: typeof filtered }>
-	}
-
+	const lookup = buildLookup(allLocations)
 	const planetMap = new Map<string, PlanetGroup>()
 
-	// Helper to find top-level ancestor (planet or star) for a given location
-	const findTopParent = (loc: (typeof locations)[0]) => {
-		let current = loc
-		while (current.parentObject) {
-			const parent = lookup.get(current.parentObject)
-			if (!parent) break
-			if (parent.type === 'PLANET' || parent.type === 'STAR') return parent
-			current = parent
-		}
-		// fallback to parentObject name or self
-		if (loc.parentObject) return lookup.get(loc.parentObject) || loc
-		return loc
-	}
-
 	for (const l of filtered) {
-		const top = findTopParent(l)
-		const topName = (top && top.name) || l.parentObject || l.type || 'Other'
-
-		if (!planetMap.has(topName))
-			planetMap.set(topName, { label: topName, direct: [], moons: [] })
-
-		const group = planetMap.get(topName)!
-
-		// If this item is a moon, add to moons list (as moon entry)
-		if (l.type === 'MOON') {
-			// ensure moon bucket exists
-			group.moons.push({ moon: l, children: [] })
-			continue
-		}
-
-		// If the item's parent is a moon, put it under that moon's children
-		if (l.parentObject) {
-			const parent = lookup.get(l.parentObject)
-			if (parent && parent.type === 'MOON') {
-				// find existing moon bucket or create one
-				let moonBucket = group.moons.find((m) => m.moon?.name === parent.name)
-				if (!moonBucket) {
-					moonBucket = { moon: parent, children: [] }
-					group.moons.push(moonBucket)
-				}
-				moonBucket.children.push(l)
-				continue
-			}
-		}
-
-		// Otherwise it's a direct child of the planet/top parent
-		group.direct.push(l)
+		placeInGroup(l, planetMap, lookup)
 	}
 
-	// Sort groups and entries
 	const groups = Array.from(planetMap.values())
 	groups.sort((a, b) => a.label.localeCompare(b.label))
 	for (const g of groups) {
@@ -112,6 +116,7 @@ interface LocationSelectProps {
 	value?: string
 	onValueChange?: (value: string) => void
 	placeholder?: string
+	filterSystem?: string
 }
 
 /**
@@ -134,12 +139,25 @@ function LocationSelect({
 	value,
 	onValueChange,
 	placeholder = 'Select a location',
-}: LocationSelectProps) {
+	filterSystem,
+}: Readonly<LocationSelectProps>) {
+	const { locations, loading } = useMapData()
 	const [query, setQuery] = useState('')
+	const selectableLocations = useMemo(
+		() =>
+			locations.filter((location) => {
+				if (location.isSelectable === false || !location.name) return false
+				if (filterSystem) {
+					return location.system?.toLowerCase() === filterSystem.toLowerCase()
+				}
+				return true
+			}),
+		[locations, filterSystem],
+	)
 
 	const groups = useMemo(
-		() => groupAndFilterLocations(getSelectableLocations(), query),
-		[query],
+		() => groupAndFilterLocations(selectableLocations, locations, query),
+		[query, selectableLocations, locations],
 	)
 
 	return (
@@ -152,6 +170,11 @@ function LocationSelect({
 			</SelectTrigger>
 
 			<SelectContent>
+				{loading && (
+					<div className='px-3 py-2 text-sm text-muted-foreground'>
+						Loading map locations...
+					</div>
+				)}
 				{/* Search input */}
 				<div className='px-3 py-2'>
 					<input
@@ -160,11 +183,17 @@ function LocationSelect({
 						placeholder='Search locations...'
 						value={query}
 						onChange={(e) => setQuery(e.target.value)}
+						onKeyDownCapture={(e) => {
+							e.stopPropagation()
+						}}
+						onKeyDown={(e) => {
+							e.stopPropagation()
+						}}
 						className='w-full bg-transparent px-2 py-1 outline-none text-sm'
 					/>
 				</div>
 				<div className='overflow-y-auto max-h-80'>
-					{groups.length === 0 ? (
+					{!loading && groups.length === 0 ? (
 						<div className='px-3 py-2 text-sm text-muted-foreground'>
 							No locations found
 						</div>

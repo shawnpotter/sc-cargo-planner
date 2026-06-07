@@ -1,4 +1,4 @@
-import { useState, useCallback } from 'react'
+import { useState, useCallback, useEffect, useRef } from 'react'
 import { Contract, DeliveryPoint } from '@/constants/types'
 import { useContracts } from '@/providers/ContractProvider'
 import { useContractAPI } from '@/hooks/useContractAPI'
@@ -23,6 +23,7 @@ interface UseContractFormReturn {
 	apiLoading: boolean
 	routeType: 'loop' | 'path'
 	endLocation: string | null
+	startLocation: string | null
 
 	// Actions
 	updateCurrentContract: (updates: Partial<Contract>) => void
@@ -41,10 +42,15 @@ interface UseContractFormReturn {
 	handleReset: () => void
 	setRouteType: (type: 'loop' | 'path') => void
 	setEndLocation: (location: string | null) => void
+	setStartLocation: (location: string | null) => void
 }
 
 export function useContractForm(
-	onSubmit: (contracts: Contract[], endLocation?: string) => void,
+	onSubmit: (
+		contracts: Contract[],
+		startLocation?: string,
+		endLocation?: string,
+	) => void,
 	onReset: () => void,
 ): UseContractFormReturn {
 	const {
@@ -58,8 +64,16 @@ export function useContractForm(
 		clearContracts,
 	} = useContracts()
 
-	const { routeType, endLocation, setRouteType, setEndLocation } = useCargo()
+	const {
+		routeType,
+		endLocation,
+		startLocation,
+		setRouteType,
+		setEndLocation,
+		setStartLocation,
+	} = useCargo()
 	const { saveContracts, loading: apiLoading } = useContractAPI()
+	const lastAutoAppliedOriginRef = useRef<string | null>(null)
 
 	const [showScanner, setShowScanner] = useState(false)
 	const [newDelivery, setNewDelivery] = useState<DeliveryPointExtended>({
@@ -67,6 +81,27 @@ export function useContractForm(
 		cargo: [],
 		quantity: 0,
 	})
+
+	useEffect(() => {
+		if (!startLocation) {
+			lastAutoAppliedOriginRef.current = null
+			return
+		}
+
+		const currentOrigin = currentContract.origin
+		const lastAutoApplied = lastAutoAppliedOriginRef.current
+		const shouldApplyDefault =
+			!currentOrigin ||
+			(lastAutoApplied !== null && currentOrigin === lastAutoApplied)
+
+		if (shouldApplyDefault && currentOrigin !== startLocation) {
+			updateCurrentContract({ origin: startLocation })
+		}
+
+		if (shouldApplyDefault) {
+			lastAutoAppliedOriginRef.current = startLocation
+		}
+	}, [startLocation, currentContract.origin, updateCurrentContract])
 
 	const handleAddDeliveryPoint = useCallback(() => {
 		if (validateDeliveryPoint(newDelivery.location, newDelivery.cargo.length)) {
@@ -97,8 +132,12 @@ export function useContractForm(
 	}, [])
 
 	const handleSaveCurrentContract = useCallback(() => {
+		// Ensure contract type is set before saving.
+		if (!currentContract.contractType) {
+			updateCurrentContract({ contractType: 'delivery' })
+		}
 		saveCurrentContract()
-	}, [saveCurrentContract])
+	}, [currentContract, saveCurrentContract, updateCurrentContract])
 
 	const handleRemoveContract = useCallback(
 		(id: string) => {
@@ -115,6 +154,9 @@ export function useContractForm(
 	)
 
 	const handleSubmit = useCallback(async () => {
+		// Collect contracts for submission - include current contract if it has content
+		let contractsToValidate = contracts
+
 		// Save current contract if it has content
 		if (
 			hasValidContractContent(
@@ -122,12 +164,41 @@ export function useContractForm(
 				currentContract.deliveryPoints?.length,
 			)
 		) {
-			saveCurrentContract()
+			// Ensure contractType is set
+			if (!currentContract.contractType) {
+				updateCurrentContract({ contractType: 'delivery' })
+			}
+			const contractId = saveCurrentContract()
+			if (contractId) {
+				// The saved contract was added to state, but due to async batching,
+				// we need to reconstruct it manually for validation
+				const newContract: Contract = {
+					id: contractId,
+					maxContainerSize: currentContract.maxContainerSize || 4,
+					origin: currentContract.origin,
+					deliveryPoints: currentContract.deliveryPoints || [],
+					payout: currentContract.payout,
+					contractType: currentContract.contractType || 'delivery',
+					pickupLocation: currentContract.pickupLocation,
+				}
+				contractsToValidate = [...contracts, newContract]
+			}
+		}
+
+		// Require a start location for route generation.
+		if (!startLocation) {
+			return {
+				success: false,
+				error: {
+					title: 'Missing Start Location',
+					description: 'Please select a starting location for your journey.',
+				},
+			}
 		}
 
 		// Validate before submission
 		const validation = validateContractsForSubmission(
-			contracts,
+			contractsToValidate,
 			hasValidContractContent(
 				currentContract.origin,
 				currentContract.deliveryPoints?.length,
@@ -151,8 +222,10 @@ export function useContractForm(
 			await saveContracts(contracts)
 		}
 
+		// Pass journey bounds to the submit handler.
 		onSubmit(
 			contracts,
+			startLocation,
 			routeType === 'path' ? (endLocation ?? undefined) : undefined,
 		)
 		return { success: true }
@@ -161,9 +234,11 @@ export function useContractForm(
 		currentContract,
 		routeType,
 		endLocation,
+		startLocation,
 		saveCurrentContract,
 		saveContracts,
 		onSubmit,
+		updateCurrentContract,
 	])
 
 	const handleReset = useCallback(() => {
@@ -171,8 +246,9 @@ export function useContractForm(
 		setNewDelivery({ location: '', cargo: [], quantity: 0 })
 		setRouteType('loop')
 		setEndLocation(null)
+		setStartLocation(null)
 		onReset()
-	}, [clearContracts, setRouteType, setEndLocation, onReset])
+	}, [clearContracts, setRouteType, setEndLocation, setStartLocation, onReset])
 
 	return {
 		// State
@@ -183,6 +259,7 @@ export function useContractForm(
 		apiLoading,
 		routeType,
 		endLocation,
+		startLocation,
 
 		// Actions
 		updateCurrentContract,
@@ -198,5 +275,6 @@ export function useContractForm(
 		handleReset,
 		setRouteType,
 		setEndLocation,
+		setStartLocation,
 	}
 }

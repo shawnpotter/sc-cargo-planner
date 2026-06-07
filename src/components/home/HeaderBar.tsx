@@ -3,6 +3,7 @@ import React, { useState } from 'react'
 import { useSession } from 'next-auth/react'
 import { UserButton } from '@/components/auth/UserButton'
 import { ThemeSwitchButton } from '@/components/home/ThemeSwitchButton'
+import { InfoMenu } from '@/components/home/InfoMenu'
 import { UserSettingsModal } from '@/components/auth/UserSettingsModal'
 import { CubeIcon } from '@heroicons/react/24/solid'
 import Link from 'next/link'
@@ -93,6 +94,7 @@ export default function HeaderBar() {
 			{/* Right: Theme Switch and User Button */}
 			<div className='z-10 flex items-center gap-2'>
 				<ThemeSwitchButton />
+				<InfoMenu />
 				{status === 'authenticated' && session?.user && (
 					<UserButton
 						name={session.user.name ?? 'User'}

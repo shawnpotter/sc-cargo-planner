@@ -32,6 +32,7 @@ const makeContract = (
 	maxSize = 8,
 ): Contract => ({
 	maxContainerSize: maxSize,
+	contractType: 'delivery',
 	origin,
 	deliveryPoints: deliveries.map((d, idx) => ({
 		id: `delivery-${idx}`,

@@ -58,7 +58,7 @@ function Results({
 	const totalCargo =
 		parsedData?.destinations?.reduce(
 			(sum, dest) => sum + dest.cargo.reduce((s, c) => s + c.quantity, 0),
-			0
+			0,
 		) || 0
 
 	const cleanedLeftText = cleanOCRText(ocrResult.left.text)
@@ -305,16 +305,9 @@ function Results({
 				<Button
 					onClick={onApply}
 					variant='default'
-					disabled={
-						!parsedData?.origin ||
-						!parsedData?.destinations?.length ||
-						parsedData?.contractType === 'pickup'
-					}
+					disabled={!parsedData?.origin || !parsedData?.destinations?.length}
 				>
 					{(() => {
-						if (parsedData?.contractType === 'pickup') {
-							return '⚠️ Pickup Contract Not Supported'
-						}
 						if (parsedData?.origin && parsedData?.destinations?.length) {
 							return '✓ Apply to Form'
 						}

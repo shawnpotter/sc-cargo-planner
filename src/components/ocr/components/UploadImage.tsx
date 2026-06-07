@@ -1,5 +1,5 @@
 // @/components/ocr/UploadImage.tsx
-import { useCallback } from 'react'
+import { useCallback, useEffect } from 'react'
 
 interface UploadImageProps {
 	onImageSelected: (imageUrl: string) => void
@@ -19,7 +19,35 @@ interface UploadImageProps {
  * - Supports clipboard paste (Ctrl+V) for images.
  * - The file input is visually hidden; interaction is handled via the styled label.
  */
-function UploadImage({ onImageSelected, disabled }: UploadImageProps) {
+function UploadImage({
+	onImageSelected,
+	disabled,
+}: Readonly<UploadImageProps>) {
+	const processClipboardItems = useCallback(
+		(items: DataTransferItemList | null | undefined) => {
+			if (!items || disabled) {
+				return false
+			}
+
+			for (const item of items) {
+				if (item.type.includes('image')) {
+					const blob = item.getAsFile()
+					if (blob) {
+						const reader = new FileReader()
+						reader.onload = (event) => {
+							onImageSelected(event.target?.result as string)
+						}
+						reader.readAsDataURL(blob)
+						return true
+					}
+				}
+			}
+
+			return false
+		},
+		[disabled, onImageSelected],
+	)
+
 	const handleFileUpload = useCallback(
 		async (e: React.ChangeEvent<HTMLInputElement>) => {
 			const file = e.target.files?.[0]
@@ -31,29 +59,36 @@ function UploadImage({ onImageSelected, disabled }: UploadImageProps) {
 			}
 			reader.readAsDataURL(file)
 		},
-		[onImageSelected]
+		[onImageSelected],
 	)
 
 	const handlePaste = useCallback(
 		async (e: React.ClipboardEvent) => {
-			const items = e.clipboardData?.items
-			if (!items) return
-
-			for (const item of items) {
-				if (item.type.indexOf('image') !== -1) {
-					const blob = item.getAsFile()
-					if (blob) {
-						const reader = new FileReader()
-						reader.onload = (e) => {
-							onImageSelected(e.target?.result as string)
-						}
-						reader.readAsDataURL(blob)
-					}
-				}
+			const handled = processClipboardItems(e.clipboardData?.items)
+			if (handled) {
+				e.preventDefault()
 			}
 		},
-		[onImageSelected]
+		[processClipboardItems],
 	)
+
+	useEffect(() => {
+		if (disabled) {
+			return
+		}
+
+		const handleGlobalPaste = (event: ClipboardEvent) => {
+			const handled = processClipboardItems(event.clipboardData?.items)
+			if (handled) {
+				event.preventDefault()
+			}
+		}
+
+		window.addEventListener('paste', handleGlobalPaste)
+		return () => {
+			window.removeEventListener('paste', handleGlobalPaste)
+		}
+	}, [disabled, processClipboardItems])
 
 	return (
 		<div

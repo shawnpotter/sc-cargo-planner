@@ -138,32 +138,81 @@ describe('AStarStrategy', () => {
 			type: 'ORBITAL_STATION',
 		})
 		g.addNode({
-			name: 'Microtech',
+			name: 'microTech',
 			coordinates: { x: 10, y: 0, z: 0 },
 			type: 'PLANET',
 		})
 		// destination is a surface location known to require planetary visit
 		g.addNode({
-			name: 'Microtech Logistics Depot S4LD01',
+			name: 'microTech Logistics Depot S4LD01',
 			coordinates: { x: 12, y: 0, z: 0 },
 			type: 'SURFACE_LOCATION',
 			requiresPlanetaryVisit: true,
 		})
 
 		// connect Port Tressler to both Microtech and the surface (direct edge exists)
-		g.addEdge('Port Tressler', 'Microtech')
-		g.addEdge('Port Tressler', 'Microtech Logistics Depot S4LD01')
-		g.addEdge('Microtech', 'Microtech Logistics Depot S4LD01')
+		g.addEdge('Port Tressler', 'microTech')
+		g.addEdge('Port Tressler', 'microTech Logistics Depot S4LD01')
+		g.addEdge('microTech', 'microTech Logistics Depot S4LD01')
 
 		const strat = new AStarStrategy()
 		const route = strat.findRoute(
 			'Port Tressler',
-			['Microtech Logistics Depot S4LD01'],
+			['microTech Logistics Depot S4LD01'],
 			g
 		)
 		// ensure planet is visited before surface location
-		const planetIndex = route.indexOf('Microtech')
-		const destIndex = route.indexOf('Microtech Logistics Depot S4LD01')
+		const planetIndex = route.indexOf('microTech')
+		const destIndex = route.indexOf('microTech Logistics Depot S4LD01')
 		expect(destIndex).toBeGreaterThan(planetIndex)
+	})
+
+	it('revisits the parent planet before each constrained surface destination', () => {
+		const g = new RouteGraph()
+		g.addNode({
+			name: 'Port Tressler',
+			coordinates: { x: 0, y: 0, z: 0 },
+			type: 'ORBITAL_STATION',
+		})
+		g.addNode({
+			name: 'microTech',
+			coordinates: { x: 10, y: 0, z: 0 },
+			type: 'PLANET',
+		})
+		g.addNode({
+			name: 'microTech Logistics Depot S4LD01',
+			coordinates: { x: 12, y: 0, z: 0 },
+			type: 'SURFACE_LOCATION',
+			requiresPlanetaryVisit: true,
+		})
+		g.addNode({
+			name: 'microTech Logistics Depot S4LD13',
+			coordinates: { x: 13, y: 0, z: 0 },
+			type: 'SURFACE_LOCATION',
+			requiresPlanetaryVisit: true,
+		})
+
+		g.addEdge('Port Tressler', 'microTech')
+		g.addEdge('microTech', 'microTech Logistics Depot S4LD01')
+		g.addEdge('microTech', 'microTech Logistics Depot S4LD13')
+		g.addEdge(
+			'microTech Logistics Depot S4LD01',
+			'microTech Logistics Depot S4LD13',
+		)
+
+		const strat = new AStarStrategy()
+		const route = strat.findRoute(
+			'Port Tressler',
+			['microTech Logistics Depot S4LD01', 'microTech Logistics Depot S4LD13'],
+			g,
+		)
+
+		expect(route).toEqual([
+			'Port Tressler',
+			'microTech',
+			'microTech Logistics Depot S4LD01',
+			'microTech',
+			'microTech Logistics Depot S4LD13',
+		])
 	})
 })

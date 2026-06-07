@@ -9,6 +9,7 @@ describe('useContractAPI', () => {
 		{
 			id: 'contract-1',
 			maxContainerSize: 32,
+			contractType: 'delivery',
 			origin: 'Port Olisar',
 			deliveryPoints: [
 				{
@@ -28,6 +29,7 @@ describe('useContractAPI', () => {
 		{
 			id: 'contract-2',
 			maxContainerSize: 24,
+			contractType: 'delivery',
 			origin: 'Area18',
 			deliveryPoints: [
 				{
@@ -124,9 +126,9 @@ describe('useContractAPI', () => {
 									ok: true,
 									json: async () => mockResponse,
 								} as unknown as Response),
-							100
-						)
-					)
+							100,
+						),
+					),
 			)
 
 			const { result } = renderHook(() => useContractAPI())

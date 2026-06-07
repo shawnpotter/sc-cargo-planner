@@ -2,7 +2,7 @@
 /**
  * Represents a location node in the route graph.
  */
-import { locations } from '@/data/locations'
+import { locations as fallbackLocations, type Location } from '@/data/locations'
 
 export interface LocationNode {
 	name: string
@@ -13,13 +13,13 @@ export interface LocationNode {
 	}
 	// Extend allowed types to match src/constants/locations.ts
 	type:
-		| 'PLANET'
-		| 'MOON'
-		| 'SURFACE_LOCATION'
-		| 'ORBITAL_STATION'
-		| 'LAGRANGE_POINT_STATION'
-		| 'STAR'
-		| 'GATEWAY'
+	| 'PLANET'
+	| 'MOON'
+	| 'SURFACE_LOCATION'
+	| 'ORBITAL_STATION'
+	| 'LAGRANGE_POINT_STATION'
+	| 'STAR'
+	| 'GATEWAY'
 	requiresPlanetaryVisit?: boolean
 }
 
@@ -43,13 +43,13 @@ export class RouteGraph {
 	private readonly edges: Map<string, Map<string, number>>
 	private readonly planetaryConstraints: Map<string, string>
 
-	constructor() {
+	constructor(sourceLocations: Location[] = fallbackLocations) {
 		this.nodes = new Map()
 		this.edges = new Map()
 		this.planetaryConstraints = new Map()
 
 		// Build planetary constraints from canonical locations list (uses parentObject)
-		for (const loc of locations) {
+		for (const loc of sourceLocations) {
 			if (loc.parentObject) {
 				this.planetaryConstraints.set(loc.name, loc.parentObject)
 			}
@@ -147,8 +147,8 @@ export class RouteGraph {
 	private calculateDistance(from: LocationNode, to: LocationNode): number {
 		return Math.sqrt(
 			Math.pow(to.coordinates.x - from.coordinates.x, 2) +
-				Math.pow(to.coordinates.y - from.coordinates.y, 2) +
-				Math.pow(to.coordinates.z - from.coordinates.z, 2),
+			Math.pow(to.coordinates.y - from.coordinates.y, 2) +
+			Math.pow(to.coordinates.z - from.coordinates.z, 2),
 		)
 	}
 
@@ -205,14 +205,14 @@ export class RouteGraph {
 						`Planet node ${planetName} (parent of ${firstUnvisited}) not present in graph`,
 					)
 				}
-				if (!route.includes(planetName)) {
-					route.push(planetName)
-					current = planetName
-				} else {
+				if (route.includes(planetName)) {
 					throw new Error(
 						`Unable to find valid route to remaining destinations`,
 					)
 				}
+
+				route.push(planetName)
+				current = planetName
 			} else {
 				route.push(nextStop)
 				unvisited.delete(nextStop)

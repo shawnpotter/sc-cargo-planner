@@ -13,6 +13,9 @@ export function CargoNavigation() {
 	const { navigateTo } = useCargoNavigation()
 	const { contracts } = useContracts()
 	const pathname = usePathname()
+	const hasPayableContracts = contracts.some(
+		(contract) => !!contract.payout && contract.payout > 0,
+	)
 
 	const isActive = (path: string) => pathname === path
 
@@ -78,10 +81,7 @@ export function CargoNavigation() {
 				<button
 					aria-label='Payment distribution'
 					onClick={() => navigateTo('/cargo/payments')}
-					disabled={
-						contracts.length === 0 ||
-						contracts.every((c) => !c.payout || c.payout <= 0)
-					}
+					disabled={!hasPayableContracts}
 					className={`flex-1 flex flex-col items-center py-3 px-2 rounded text-foreground hover:bg-chart-2/60 focus:outline-none focus:ring-2 focus:ring-primary/40 focus:ring-inset transition disabled:opacity-75 disabled:cursor-not-allowed disabled:hover:bg-transparent ${
 						isActive('/cargo/payments') ? 'bg-primary/90' : 'bg-primary/10'
 					}`}

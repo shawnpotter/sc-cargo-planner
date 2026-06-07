@@ -5,6 +5,47 @@ import { voxelDimensionsMap } from '@/constants/dimensions'
 import * as THREE from 'three'
 import { BoxGeometry } from 'three'
 
+const ensureBrightHexColor = (hex: string, minLuminance = 0.45): string => {
+	const normalized = hex.startsWith('#') ? hex.slice(1) : hex
+	if (!/^[0-9a-fA-F]{6}$/.test(normalized)) {
+		return '#22D3EE'
+	}
+
+	let red = Number.parseInt(normalized.slice(0, 2), 16)
+	let green = Number.parseInt(normalized.slice(2, 4), 16)
+	let blue = Number.parseInt(normalized.slice(4, 6), 16)
+
+	let luminance = (0.2126 * red + 0.7152 * green + 0.0722 * blue) / 255
+
+	if (luminance >= minLuminance) {
+		return `#${normalized.toUpperCase()}`
+	}
+
+	const target = minLuminance * 255
+	const current = Math.max(1, 0.2126 * red + 0.7152 * green + 0.0722 * blue)
+	const mixAmount = Math.min(
+		0.85,
+		Math.max(0, (target - current) / (255 - current)),
+	)
+
+	red = Math.round(red + (255 - red) * mixAmount)
+	green = Math.round(green + (255 - green) * mixAmount)
+	blue = Math.round(blue + (255 - blue) * mixAmount)
+
+	luminance = (0.2126 * red + 0.7152 * green + 0.0722 * blue) / 255
+	if (luminance < minLuminance) {
+		const boost = Math.min(50, Math.round((minLuminance - luminance) * 255))
+		red = Math.min(255, red + boost)
+		green = Math.min(255, green + boost)
+		blue = Math.min(255, blue + boost)
+	}
+
+	return `#${[red, green, blue]
+		.map((component) => component.toString(16).padStart(2, '0'))
+		.join('')
+		.toUpperCase()}`
+}
+
 // Define a mapping from cargoType to color scheme
 const cargoTypeColorMap: Record<string, { main: string; accent: string }> = {
 	AGRICIUM: { main: '#FF8A00', accent: '#FFB300' },
@@ -108,7 +149,15 @@ function ContainerVoxel({
 	const colorScheme = useMemo(
 		() =>
 			cargoTypeColorMap[cargoType] ?? { main: '#16a085', accent: '#1abc9c' },
-		[cargoType]
+		[cargoType],
+	)
+
+	const visibleColorScheme = useMemo(
+		() => ({
+			main: ensureBrightHexColor(colorScheme.main, 0.45),
+			accent: ensureBrightHexColor(colorScheme.accent, 0.5),
+		}),
+		[colorScheme],
 	)
 
 	// Create a simpler texture that will render properly
@@ -124,11 +173,11 @@ function ContainerVoxel({
 		}
 
 		// Base background
-		ctx.fillStyle = isHighlighted ? '#FF8A00' : colorScheme.main
+		ctx.fillStyle = isHighlighted ? '#FF8A00' : visibleColorScheme.main
 		ctx.fillRect(0, 0, 256, 256)
 
 		// Add grid pattern
-		ctx.strokeStyle = isHighlighted ? '#FFD700' : colorScheme.accent
+		ctx.strokeStyle = isHighlighted ? '#FFD700' : visibleColorScheme.accent
 		ctx.lineWidth = 2
 
 		// Grid lines
@@ -163,16 +212,16 @@ function ContainerVoxel({
 		const texture = new THREE.CanvasTexture(canvas)
 		texture.needsUpdate = true
 		return texture
-	}, [isHighlighted, container.contractIndex, colorScheme])
+	}, [isHighlighted, container.contractIndex, visibleColorScheme])
 
 	// Simple material colors for better visibility
 	const mainColor = isHighlighted
 		? new THREE.Color('#FF8A00')
-		: new THREE.Color(colorScheme.main)
+		: new THREE.Color(visibleColorScheme.main)
 
 	const emissiveColor = isHighlighted
 		? new THREE.Color('#FF8A00')
-		: new THREE.Color(colorScheme.accent)
+		: new THREE.Color(visibleColorScheme.accent)
 
 	return (
 		<group
@@ -208,12 +257,12 @@ function ContainerVoxel({
 							new BoxGeometry(
 								originalWidth * 1.01,
 								height * 1.01,
-								originalDepth * 1.01
+								originalDepth * 1.01,
 							),
 						]}
 					/>
 					<lineBasicMaterial
-						color={isHighlighted ? '#FFFFFF' : '#333333'}
+						color={isHighlighted ? '#FFFFFF' : '#94A3B8'}
 						linewidth={2}
 					/>
 				</lineSegments>

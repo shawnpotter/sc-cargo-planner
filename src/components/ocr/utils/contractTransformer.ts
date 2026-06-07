@@ -12,19 +12,10 @@ export interface TransformResult {
  * @returns Transformed contracts and any validation errors
  */
 export function transformParsedContract(
-	parsedData: ParsedContract | null
+	parsedData: ParsedContract | null,
 ): TransformResult {
 	if (!parsedData) {
 		return { contracts: [], error: 'No parsed data available' }
-	}
-
-	// Check if this is a pickup contract
-	if (parsedData.contractType === 'pickup') {
-		return {
-			contracts: [],
-			error:
-				'Pickup contracts are not currently supported. This contract requires collecting cargo from multiple locations and delivering it all to the origin. Please use a delivery contract instead.',
-		}
 	}
 
 	// Validate required fields
@@ -45,7 +36,7 @@ export function transformParsedContract(
 		maxContainerSize: parsedData.maxContainerSize || 16, // Default to 16 SCU if not specified
 		origin: parsedData.origin,
 		payout: parsedData.payout,
-		contractType: parsedData.contractType,
+		contractType: parsedData.contractType || 'delivery',
 		deliveryPoints: parsedData.destinations.map((dest, idx) => ({
 			id: `dp-${idx}-${Date.now()}`,
 			location: dest.location,

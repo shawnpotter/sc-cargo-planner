@@ -12,9 +12,10 @@ const makeShip = (): Ship => ({
 
 const makeContract = (
 	origin: string,
-	deliveries: Array<{ location: string; quantity: number; cargoType?: string }>
+	deliveries: Array<{ location: string; quantity: number; cargoType?: string }>,
 ): Contract => ({
 	maxContainerSize: 8,
+	contractType: 'delivery',
 	origin,
 	deliveryPoints: deliveries.map((d, idx) => ({
 		id: `delivery-${idx}`,
@@ -64,7 +65,7 @@ describe('handleLoadCargo - Unit Tests', () => {
 
 			// Verify containers exist for each delivery point
 			const deliveryIndices = new Set(
-				containersSet.map((c: Container) => c.deliveryIndex)
+				containersSet.map((c: Container) => c.deliveryIndex),
 			)
 			expect(deliveryIndices.size).toBe(3)
 		})
@@ -102,6 +103,7 @@ describe('handleLoadCargo - Unit Tests', () => {
 			const contracts: Contract[] = [
 				{
 					maxContainerSize: 8,
+					contractType: 'delivery',
 					origin: 'Port Tressler',
 					deliveryPoints: [
 						{
@@ -161,7 +163,7 @@ describe('handleLoadCargo - Unit Tests', () => {
 			// With a 64 SCU ship, we can't fit all 100 SCU
 			// Should log a warning about remaining cargo
 			expect(consoleSpy).toHaveBeenCalledWith(
-				expect.stringContaining('Unable to fit remaining')
+				expect.stringContaining('Unable to fit remaining'),
 			)
 
 			consoleSpy.mockRestore()

@@ -6,7 +6,7 @@ export class NearestNeighborStrategy implements IRoutingStrategy {
 	findRoute(
 		start: string,
 		destinations: string[],
-		graph: RouteGraph
+		graph: RouteGraph,
 	): string[] {
 		const route: string[] = [start]
 		let current = start
@@ -39,14 +39,14 @@ export class NearestNeighborStrategy implements IRoutingStrategy {
 				if (!planetName) {
 					throw new Error(`No planetary constraint for ${firstUnvisited}`)
 				}
-				if (!route.includes(planetName)) {
-					route.push(planetName)
-					current = planetName
-				} else {
+				if (route.includes(planetName)) {
 					throw new Error(
-						'Unable to find valid route to remaining destinations'
+						'Unable to find valid route to remaining destinations',
 					)
 				}
+
+				route.push(planetName)
+				current = planetName
 			} else {
 				route.push(nextStop)
 				unvisited.delete(nextStop)
