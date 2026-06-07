@@ -468,7 +468,7 @@ function ContractForm({ onSubmit, onReset, haulingMode }: ContractFormProps) {
 								</p>
 								<p className='text-xs text-destructive/80'>
 									You have {contracts.length} saved contract
-									{contracts.length !== 1 ? 's' : ''}, but haven't selected a
+									{contracts.length !== 1 ? 's' : ''}, but haven&apos;t selected a
 									starting location yet. Please choose a starting location above
 									to generate your route.
 								</p>

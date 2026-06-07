@@ -164,6 +164,15 @@ export function useContractForm(
 				currentContract.deliveryPoints?.length,
 			)
 		) {
+			if (!currentContract.origin) {
+				return {
+					success: false,
+					error: {
+						title: 'Missing Contract Origin',
+						description: 'Please select an origin location before submitting.',
+					},
+				}
+			}
 			// Ensure contractType is set
 			if (!currentContract.contractType) {
 				updateCurrentContract({ contractType: 'delivery' })
