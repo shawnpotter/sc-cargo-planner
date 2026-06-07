@@ -6,6 +6,113 @@ function getKnownLocations(): string[] {
 	return getKnownLocationNames()
 }
 
+const OCR_FALSE_POSITIVE_NUMBER = /\b\d{1,2}\b/g
+
+const normalizeForComparison = (value: string): string => {
+	return value
+		.toLowerCase()
+		// Normalize punctuation separators into spaces.
+		.replaceAll(/[^a-z0-9\s-]/g, ' ')
+		// Normalize common OCR family errors around Hurston station prefixes.
+		.replaceAll(/\bho(?=(ms|pc)-)/g, 'hd')
+		.replaceAll(/\bhdo(?=pc-)/g, 'hd')
+		// Remove short standalone numbers often injected by OCR (e.g. "Magnolia 1 Workcenter").
+		.replaceAll(OCR_FALSE_POSITIVE_NUMBER, ' ')
+		.replaceAll(/-/g, ' ')
+		.replaceAll(/\s+/g, ' ')
+		.trim()
+}
+
+const tokenize = (value: string): string[] => {
+	return normalizeForComparison(value)
+		.split(' ')
+		.filter((token) => token.length > 1)
+}
+
+const levenshteinDistance = (a: string, b: string): number => {
+	if (a === b) {
+		return 0
+	}
+
+	if (!a.length) {
+		return b.length
+	}
+
+	if (!b.length) {
+		return a.length
+	}
+
+	const previousRow = new Array<number>(b.length + 1)
+	const currentRow = new Array<number>(b.length + 1)
+
+	for (let j = 0; j <= b.length; j += 1) {
+		previousRow[j] = j
+	}
+
+	for (let i = 1; i <= a.length; i += 1) {
+		currentRow[0] = i
+		for (let j = 1; j <= b.length; j += 1) {
+			const substitutionCost = a[i - 1] === b[j - 1] ? 0 : 1
+			currentRow[j] = Math.min(
+				currentRow[j - 1] + 1,
+				previousRow[j] + 1,
+				previousRow[j - 1] + substitutionCost,
+			)
+		}
+
+		for (let j = 0; j <= b.length; j += 1) {
+			previousRow[j] = currentRow[j]
+		}
+	}
+
+	return previousRow[b.length]
+}
+
+const calculateLocationScore = (ocrText: string, candidate: string): number => {
+	const normalizedOCR = normalizeForComparison(ocrText)
+	const normalizedCandidate = normalizeForComparison(candidate)
+
+	if (!normalizedOCR || !normalizedCandidate) {
+		return 0
+	}
+
+	if (normalizedOCR === normalizedCandidate) {
+		return 1
+	}
+
+	if (
+		normalizedOCR.includes(normalizedCandidate) ||
+		normalizedCandidate.includes(normalizedOCR)
+	) {
+		return 0.95
+	}
+
+	const ocrTokens = tokenize(ocrText)
+	const candidateTokens = tokenize(candidate)
+	const tokenSet = new Set(candidateTokens)
+	const sharedTokens = ocrTokens.filter((token) => tokenSet.has(token)).length
+	const tokenScore =
+		ocrTokens.length > 0 ? sharedTokens / Math.max(ocrTokens.length, 1) : 0
+
+	const distance = levenshteinDistance(normalizedOCR, normalizedCandidate)
+	const maxLength = Math.max(normalizedOCR.length, normalizedCandidate.length)
+	const distanceScore = maxLength > 0 ? 1 - distance / maxLength : 0
+
+	return distanceScore * 0.65 + tokenScore * 0.35
+}
+
+const getMinimumConfidence = (normalizedInput: string): number => {
+	if (normalizedInput.length < 8) {
+		return 0.9
+	}
+
+	if (normalizedInput.length < 14) {
+		return 0.85
+	}
+
+	return 0.78
+}
+
 const LOCATION_ALIASES: Record<string, string> = {
 	area18: 'Riker Memorial Spaceport',
 	'area 18': 'Riker Memorial Spaceport',
@@ -64,6 +171,7 @@ export function parseDestinationName(destinationRaw: string): string {
 	// First check if it matches known patterns (HDMS-X, HOMS-X, etc.)
 	// Fix common OCR issues where HDMS is read as HOMS
 	cleaned = cleaned.replaceAll(/HOMS-/gi, 'HDMS-')
+	cleaned = cleaned.replaceAll(/HDOPC-/gi, 'HDPC-')
 
 	// Handle HDMS- or HDPC- patterns with or without space after the dash
 	const miningStationMatch = /HD(MS|PC)-\s*([A-Z]+)/i.exec(cleaned)
@@ -180,11 +288,11 @@ export function parseDestinationName(destinationRaw: string): string {
 export function findBestLocationMatch(text: string): string | null {
 	if (!text || text.length < 3) return null // Don't match very short strings
 
-	const cleanText = text
-		.toLowerCase()
-		.trim()
-		.replaceAll(/\s+/g, ' ')
-		.replaceAll(/\.$/g, '')
+	const cleanText = text.trim().replaceAll(/\.$/g, '')
+	const normalizedText = normalizeForComparison(cleanText)
+	if (!normalizedText || normalizedText.length < 3) {
+		return null
+	}
 
 	const aliasMatch = resolveLocationAlias(cleanText)
 	if (aliasMatch) {
@@ -195,23 +303,41 @@ export function findBestLocationMatch(text: string): string | null {
 
 	// First try exact match
 	const exactMatch = knownLocations.find(
-		(loc) => loc.toLowerCase() === cleanText,
+		(loc) => normalizeForComparison(loc) === normalizedText,
 	)
 	if (exactMatch) {
 		return exactMatch
 	}
 
+	// Cross-reference OCR text against cached runtime map names using fuzzy scoring.
+	let bestMatch: string | null = null
+	let bestScore = 0
+	for (const location of knownLocations) {
+		const score = calculateLocationScore(cleanText, location)
+		if (score > bestScore) {
+			bestScore = score
+			bestMatch = location
+		}
+	}
+
+	if (bestMatch && bestScore >= getMinimumConfidence(normalizedText)) {
+		return bestMatch
+	}
+
 	// Try partial matches only if the input is substantial enough
-	if (cleanText.length >= 5) {
+	if (normalizedText.length >= 5) {
 		// Minimum length for partial matching
 		for (const location of knownLocations) {
-			const locLower = location.toLowerCase()
+			const locLower = normalizeForComparison(location)
 
 			// Only match if it's a significant portion of the location name
-			if (cleanText.includes(locLower) || locLower.includes(cleanText)) {
+			if (
+				normalizedText.includes(locLower) ||
+				locLower.includes(normalizedText)
+			) {
 				// Avoid matching very generic terms
 				if (
-					cleanText.split(' ').length === 1 &&
+					normalizedText.split(' ').length === 1 &&
 					locLower.split(' ').length > 2
 				) {
 					continue // Skip single word matches for multi-word locations

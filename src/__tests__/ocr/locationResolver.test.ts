@@ -18,4 +18,18 @@ describe('locationResolver aliases', () => {
 			'New Babbage Interstellar Spaceport',
 		)
 	})
+
+	it('corrects HDOPC OCR noise to HDPC location names', () => {
+		expect(parseDestinationName('HDOPC-Farnesway')).toBe('HDPC-Farnesway')
+		expect(findBestLocationMatch('HDOPC-Farnesway')).toBe('HDPC-Farnesway')
+	})
+
+	it('removes stray OCR number tokens inside location names', () => {
+		expect(parseDestinationName('Sakura Sun Magnolia 1 Workcenter')).toBe(
+			'Sakura Sun Magnolia Workcenter',
+		)
+		expect(findBestLocationMatch('Sakura Sun Magnolia 1 Workcenter')).toBe(
+			'Sakura Sun Magnolia Workcenter',
+		)
+	})
 })
