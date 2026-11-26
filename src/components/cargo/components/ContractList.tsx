@@ -7,12 +7,14 @@ interface ContractListProps {
 	contracts: Contract[]
 	haulingMode: HaulingMode
 	onRemoveContract: (id: string) => void
+	onEditContract?: (contract: Contract) => void
 }
 
 export function ContractList({
 	contracts,
 	haulingMode,
 	onRemoveContract,
+	onEditContract,
 }: ContractListProps) {
 	if (contracts.length === 0) {
 		return null
@@ -30,6 +32,7 @@ export function ContractList({
 						contract={contract}
 						showPayout={haulingMode === HaulingMode.CONTRACT}
 						onRemove={onRemoveContract}
+						onEdit={onEditContract ? () => onEditContract(contract) : undefined}
 						variant='saved'
 					/>
 				))}

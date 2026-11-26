@@ -1,5 +1,5 @@
-import { useState, useEffect, useCallback, useRef } from 'react'
-import { createWorker, Worker } from 'tesseract.js'
+import { useState, useEffect, useCallback } from 'react'
+import { createWorker, type Worker } from 'tesseract.js'
 
 interface OCRResult {
 	text: string
@@ -10,20 +10,33 @@ interface UseOCRWorkerReturn {
 	recognizeImage: (imageData: string) => Promise<OCRResult>
 	progress: number
 	isReady: boolean
+	initializationError: string | null
+	retryInitialization: () => void
 }
 
 export function useOCRWorker(): UseOCRWorkerReturn {
 	const [worker, setWorker] = useState<Worker | null>(null)
 	const [progress, setProgress] = useState<number>(0)
-	const [isReady, setIsReady] = useState(false)
-	const workerRef = useRef<Worker | null>(null)
+	const [initializationError, setInitializationError] = useState<string | null>(null)
+	const [attempt, setAttempt] = useState(0)
 
 	useEffect(() => {
 		let mounted = true
+		let activeWorker: Worker | null = null
+		let initializationFailed = false
+
+		const handleError = () => {
+			if (!mounted || activeWorker) return
+			initializationFailed = true
+			setInitializationError(
+				'The screenshot scanner could not start. Retry the scanner or enter the contract manually.'
+			)
+		}
 
 		const initWorker = async () => {
 			try {
 				const w = await createWorker('eng', 1, {
+					errorHandler: handleError,
 					logger: (m) => {
 						if (mounted && m.status === 'recognizing text') {
 							setProgress(Math.round(m.progress * 100))
@@ -31,16 +44,14 @@ export function useOCRWorker(): UseOCRWorkerReturn {
 					},
 				})
 
-				if (mounted) {
-					workerRef.current = w
+				if (mounted && !initializationFailed) {
+					activeWorker = w
 					setWorker(w)
-					setIsReady(true)
 				} else {
-					// If component unmounted during init, terminate immediately
 					await w.terminate()
 				}
-			} catch (error) {
-				console.error('Failed to initialize OCR worker:', error)
+			} catch {
+				handleError()
 			}
 		}
 
@@ -48,10 +59,13 @@ export function useOCRWorker(): UseOCRWorkerReturn {
 
 		return () => {
 			mounted = false
-			if (workerRef.current) {
-				workerRef.current.terminate()
-			}
+			void activeWorker?.terminate()
 		}
+	}, [attempt])
+
+	const retryInitialization = useCallback(() => {
+		setInitializationError(null)
+		setAttempt(attempt => attempt + 1)
 	}, [])
 
 	const recognizeImage = useCallback(
@@ -73,6 +87,8 @@ export function useOCRWorker(): UseOCRWorkerReturn {
 	return {
 		recognizeImage,
 		progress,
-		isReady,
+		isReady: worker !== null,
+		initializationError,
+		retryInitialization,
 	}
 }

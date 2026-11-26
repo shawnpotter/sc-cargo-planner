@@ -1,322 +1,77 @@
-// @/components/ocr/Results.tsx
+import { useRef, useState } from 'react'
 import { Button } from '@/components/ui/button'
-import { ColumnOCRResult, ParsedContract } from '@/components/ocr/parser/types'
-import { cleanOCRText } from '@/components/ocr/parser/utils/cleaners'
+import { Input } from '@/components/ui/input'
+import { LocationSearch } from '@/components/cargo/LocationSearch'
+import { useMapData } from '@/providers/MapDataProvider'
+import { ColumnOCRResult, ParsedContract } from '../parser/types'
+import { transformParsedContract } from '../utils/contractTransformer'
 
 interface ResultsProps {
 	ocrResult: ColumnOCRResult
 	parsedData: ParsedContract | null
 	onNewImage: () => void
 	onClose: () => void
-	onApply: () => void
+	onApply: (reviewed: ParsedContract) => void
 }
 
-/**
- * Displays the results of OCR processing and contract data extraction.
- *
- * @component
- * @param {object} props - The component props.
- * @param {OcrResult} props.ocrResult - The raw OCR result containing text and confidence for left and right columns.
- * @param {ParsedContractData | null} props.parsedData - The parsed contract data extracted from the OCR result.
- * @param {() => void} props.onNewImage - Callback invoked when the user requests to process a new image.
- * @param {() => void} props.onClose - Callback invoked when the user cancels or closes the results view.
- * @param {() => void} props.onApply - Callback invoked when the user applies the extracted contract data to the form.
- *
- * @returns {JSX.Element} The rendered results view, including confidence summary, extracted contract data, raw OCR text, and action buttons.
- */
-function Results({
-	ocrResult,
-	parsedData,
-	onNewImage,
-	onClose,
-	onApply,
-}: Readonly<ResultsProps>) {
-	// Calculate overall confidence
-	const avgConfidence = (
-		(ocrResult.left.confidence + ocrResult.right.confidence) /
-		2
-	).toFixed(1)
-
-	// Determine confidence color
-	const getConfidenceColor = (confidence: number) => {
-		if (confidence >= 80) return 'text-green-400'
-		if (confidence >= 60) return 'text-yellow-400'
-		return 'text-red-400'
+export function Results({ ocrResult, parsedData, onNewImage, onClose, onApply }: Readonly<ResultsProps>) {
+	const { locations } = useMapData()
+	const [review, setReview] = useState<ParsedContract>(() => ({
+		...parsedData,
+		origin: parsedData?.origin || '',
+		contractType: parsedData?.contractType || 'delivery',
+		maxContainerSize: parsedData?.maxContainerSize,
+		payout: parsedData?.payout ?? 0,
+		destinations: parsedData?.destinations?.length ? structuredClone(parsedData.destinations) : [{ location: '', cargo: [{ type: '', quantity: 0 }] }],
+	}))
+	const applied = useRef(false)
+	const [applyError, setApplyError] = useState<string | null>(null)
+	const validation = transformParsedContract(review, locations.filter(location => location.isSelectable !== false).map(location => location.name))
+	const updateDestination = (index: number, updates: Partial<NonNullable<ParsedContract['destinations']>[number]>) => {
+		setReview(previous => ({ ...previous, destinations: previous.destinations?.map((destination, i) => i === index ? { ...destination, ...updates } : destination) }))
 	}
-
-	// Check what data was successfully parsed
-	const hasParsedData =
-		parsedData &&
-		(parsedData.origin ||
-			parsedData.destinations?.length ||
-			parsedData.maxContainerSize ||
-			parsedData.payout ||
-			parsedData.rank ||
-			parsedData.contractedBy)
-
-	// Calculate totals
-	const totalCargo =
-		parsedData?.destinations?.reduce(
-			(sum, dest) => sum + dest.cargo.reduce((s, c) => s + c.quantity, 0),
-			0,
-		) || 0
-
-	const cleanedLeftText = cleanOCRText(ocrResult.left.text)
-	const cleanedRightText = cleanOCRText(ocrResult.right.text)
-
-	return (
-		<div className='flex flex-col gap-4 max-h-[70vh] overflow-y-auto'>
-			{/* OCR Confidence Summary */}
-			<div className='bg-card p-3 rounded border border-border'>
-				<h3 className='text-sm font-semibold text-foreground'>
-					OCR Confidence
-				</h3>
-				<div className='mt-2 grid grid-cols-3 gap-2 text-sm text-muted-foreground'>
-					<div className='flex flex-col'>
-						<span className='opacity-70'>Left Column:</span>
-						<span className={getConfidenceColor(ocrResult.left.confidence)}>
-							{ocrResult.left.confidence.toFixed(1)}%
-						</span>
-					</div>
-					<div className='flex flex-col'>
-						<span className='opacity-70'>Right Column:</span>
-						<span className={getConfidenceColor(ocrResult.right.confidence)}>
-							{ocrResult.right.confidence.toFixed(1)}%
-						</span>
-					</div>
-					<div className='flex flex-col'>
-						<span className='opacity-70'>Average:</span>
-						<span className='text-foreground'>{avgConfidence}%</span>
-					</div>
-				</div>
+	const apply = () => {
+		if (applied.current || validation.error) return
+		applied.current = true
+		try { onApply(review) } catch (error) {
+			applied.current = false
+			setApplyError(error instanceof Error ? error.message : 'Unable to add this contract. Please try again.')
+		}
+	}
+	return <div className='space-y-4 max-h-[75vh] overflow-y-auto'>
+		<div className='rounded-xl border border-primary/25 bg-card p-4 space-y-4'>
+			<h3 className='font-semibold'>Review scanned contract</h3>
+			<p className='text-sm text-muted-foreground'>Check every field before adding this contract to your run.</p>
+			<div className='grid gap-4 sm:grid-cols-2'>
+				<label className='space-y-2'>Contract type<select className='w-full rounded-md border bg-background p-2 min-h-10' value={review.contractType} onChange={event => {
+					const value = event.target.value
+					if (value === 'delivery' || value === 'pickup') setReview({ ...review, contractType: value })
+				}}><option value='delivery'>Delivery</option><option value='pickup'>Pickup</option></select></label>
+				<div><label htmlFor='review-origin'>{review.contractType === 'pickup' ? 'Delivery location' : 'Pickup location'}</label><LocationSearch id='review-origin' value={review.origin || ''} onValueChange={origin => setReview({ ...review, origin })} /></div>
+				<label>Container limit (SCU)<select className='w-full rounded-md border bg-background p-2 min-h-10' value={review.maxContainerSize ?? ''} onChange={event => setReview({ ...review, maxContainerSize: Number(event.target.value) })}><option value=''>Choose limit</option>{[1, 2, 4, 8, 16, 24, 32].map(size => <option key={size} value={size}>{size}</option>)}</select></label>
+				<label>Payout (aUEC)<Input type='number' min='0' value={review.payout ?? ''} onChange={event => setReview({ ...review, payout: event.target.value === '' ? undefined : Number(event.target.value) })} /></label>
 			</div>
-
-			{/* Extracted Contract Data */}
-			<div className='bg-card p-3 rounded border border-border'>
-				<h3 className='text-sm font-semibold text-foreground'>
-					Extracted Contract Data
-				</h3>
-
-				{hasParsedData ? (
-					<div className='mt-2 space-y-3 text-sm text-muted-foreground'>
-						{/* Basic Contract Info */}
-						<div className='grid grid-cols-2 gap-3'>
-							<div className='space-y-2'>
-								{parsedData.rank && (
-									<div>
-										<div className='opacity-70 text-xs'>Contract Rank:</div>
-										<div className='text-sm text-foreground'>
-											{parsedData.rank}
-										</div>
-									</div>
-								)}
-								{parsedData.origin && (
-									<div>
-										<div className='opacity-70 text-xs'>Origin:</div>
-										<div className='text-sm text-foreground'>
-											{parsedData.origin}
-										</div>
-									</div>
-								)}
-								{parsedData.maxContainerSize && (
-									<div>
-										<div className='opacity-70 text-xs'>
-											Max Container Size:
-										</div>
-										<div className='text-sm text-foreground'>
-											{parsedData.maxContainerSize} SCU
-										</div>
-									</div>
-								)}
-							</div>
-							<div className='space-y-2'>
-								{parsedData.payout && (
-									<div>
-										<div className='opacity-70 text-xs'>Contract Payout:</div>
-										<div className='text-sm text-foreground'>
-											{parsedData.payout.toLocaleString()} aUEC
-										</div>
-									</div>
-								)}
-								{parsedData.contractedBy && (
-									<div>
-										<div className='opacity-70 text-xs'>Contractor:</div>
-										<div className='text-sm text-foreground'>
-											{parsedData.contractedBy}
-										</div>
-									</div>
-								)}
-								{totalCargo > 0 && (
-									<div>
-										<div className='opacity-70 text-xs'>Total Cargo:</div>
-										<div className='text-sm text-foreground'>
-											{totalCargo} SCU
-										</div>
-									</div>
-								)}
-							</div>
-						</div>
-
-						{/* Delivery Points */}
-						{parsedData.destinations && parsedData.destinations.length > 0 && (
-							<div>
-								<div className='flex items-center gap-2'>
-									<div className='opacity-70 text-xs'>
-										{parsedData.contractType === 'pickup'
-											? 'Pickup Locations'
-											: 'Delivery Points'}{' '}
-										({parsedData.destinations.length}):
-									</div>
-									{parsedData.contractType === 'pickup' && (
-										<span className='text-xs bg-blue-600 text-white px-2 py-0.5 rounded'>
-											PICKUP CONTRACT
-										</span>
-									)}
-								</div>
-								{parsedData.contractType === 'pickup' && (
-									<div className='mt-1 text-xs text-blue-300 bg-blue-950/30 p-2 rounded border border-blue-800'>
-										ℹ️ This is a pickup contract. You&apos;ll collect cargo from
-										each location and deliver all of it to {parsedData.origin}.
-									</div>
-								)}
-								<div className='mt-2 space-y-2'>
-									{parsedData.destinations.map((dest) => (
-										<div
-											key={dest.location}
-											className='bg-card p-2 rounded border border-border'
-										>
-											<div className='font-medium text-foreground'>
-												📍 {dest.location}
-											</div>
-											<div className='mt-1 text-sm text-muted-foreground space-y-1'>
-												{dest.cargo.map((c) => (
-													<div
-														key={c.type}
-														className='flex justify-between'
-													>
-														<span>{c.type}</span>
-														<span>{c.quantity} SCU</span>
-													</div>
-												))}
-												<div className='text-xs opacity-70'>
-													Subtotal:{' '}
-													{dest.cargo.reduce((sum, c) => sum + c.quantity, 0)}{' '}
-													SCU
-												</div>
-											</div>
-										</div>
-									))}
-								</div>
-							</div>
-						)}
-
-						{/* Validation Warnings */}
-						{!parsedData.origin && (
-							<div className='flex items-center gap-2 text-yellow-300'>
-								<span>⚠️</span>
-								<span className='text-sm'>
-									Warning: Origin location not detected
-								</span>
-							</div>
-						)}
-						{(!parsedData.destinations ||
-							parsedData.destinations.length === 0) && (
-							<div className='flex items-center gap-2 text-yellow-300'>
-								<span>⚠️</span>
-								<span className='text-sm'>
-									Warning: No delivery points detected
-								</span>
-							</div>
-						)}
-					</div>
-				) : (
-					<div className='mt-2 text-sm text-muted-foreground'>
-						<p>⚠️ No contract data could be parsed</p>
-						<p>
-							Please check the raw OCR text below and try adjusting image
-							settings
-						</p>
-					</div>
-				)}
-			</div>
-
-			{/* Raw OCR Text */}
-			<details className='bg-card p-3 rounded border border-border text-sm text-muted-foreground'>
-				<summary className='flex justify-between items-center cursor-pointer'>
-					<span>📄 Raw OCR Text</span>
-					<span className='opacity-70'>(Click to expand)</span>
-				</summary>
-				<div className='mt-2 grid grid-cols-1 md:grid-cols-2 gap-2'>
-					<div className='p-2 bg-background rounded'>
-						<div className='opacity-70 text-xs'>
-							Left Column: {ocrResult.left.confidence.toFixed(1)}%
-						</div>
-						<pre className='whitespace-pre-wrap text-xs mt-1'>
-							{ocrResult.left.text || '(No text detected)'}
-						</pre>
-					</div>
-					<div className='p-2 bg-background rounded'>
-						<div className='opacity-70 text-xs'>
-							Right Column: {ocrResult.right.confidence.toFixed(1)}%
-						</div>
-						<pre className='whitespace-pre-wrap text-xs mt-1'>
-							{ocrResult.right.text || '(No text detected)'}
-						</pre>
-					</div>
-				</div>
-			</details>
-
-			{/* Cleaned OCR Text */}
-			<details className='bg-card p-3 rounded border border-border text-sm text-muted-foreground'>
-				<summary className='flex justify-between items-center cursor-pointer'>
-					<span>🧹 Cleaned OCR Text</span>
-					<span className='opacity-70'>(Click to expand)</span>
-				</summary>
-				<div className='mt-2 grid grid-cols-1 md:grid-cols-2 gap-2'>
-					<div className='p-2 bg-background rounded'>
-						<div className='opacity-70 text-xs'>Left Column (cleaned)</div>
-						<pre className='whitespace-pre-wrap text-xs mt-1'>
-							{cleanedLeftText || '(No text detected)'}
-						</pre>
-					</div>
-					<div className='p-2 bg-background rounded'>
-						<div className='opacity-70 text-xs'>Right Column (cleaned)</div>
-						<pre className='whitespace-pre-wrap text-xs mt-1'>
-							{cleanedRightText || '(No text detected)'}
-						</pre>
-					</div>
-				</div>
-			</details>
-
-			{/* Action Buttons */}
-			<div className='flex gap-2 justify-end'>
-				<Button
-					onClick={onNewImage}
-					variant='secondary'
-				>
-					🔄 New Image
-				</Button>
-				<Button
-					onClick={onClose}
-					variant='secondary'
-				>
-					✕ Cancel
-				</Button>
-				<Button
-					onClick={onApply}
-					variant='default'
-					disabled={!parsedData?.origin || !parsedData?.destinations?.length}
-				>
-					{(() => {
-						if (parsedData?.origin && parsedData?.destinations?.length) {
-							return '✓ Apply to Form'
-						}
-						return '⚠️ Missing Required Data'
-					})()}
-				</Button>
-			</div>
+			{review.destinations?.map((destination, index) => <fieldset key={index} className='space-y-3 rounded-lg border p-3'>
+				<legend className='px-2 text-sm'>Stop {index + 1}</legend>
+				<label htmlFor={`review-stop-${index}`}>{review.contractType === 'pickup' ? 'Pickup' : 'Delivery'} location {index + 1}</label>
+				<LocationSearch id={`review-stop-${index}`} value={destination.location} onValueChange={location => updateDestination(index, { location })} />
+				{destination.cargo.map((cargo, cargoIndex) => <div key={cargoIndex} className='grid gap-3 sm:grid-cols-2'>
+					<label>Cargo {index + 1}.{cargoIndex + 1}<Input value={cargo.type} onChange={event => updateDestination(index, { cargo: destination.cargo.map((item, i) => i === cargoIndex ? { ...item, type: event.target.value } : item) })} /></label>
+					<label>Quantity {index + 1}.{cargoIndex + 1} (SCU)<Input type='number' min='1' step='1' value={cargo.quantity || ''} onChange={event => updateDestination(index, { cargo: destination.cargo.map((item, i) => i === cargoIndex ? { ...item, quantity: Number(event.target.value) } : item) })} /></label>
+				</div>)}
+				<Button type='button' variant='outline' onClick={() => updateDestination(index, { cargo: [...destination.cargo, { type: '', quantity: 0 }] })}>Add cargo</Button>
+			</fieldset>)}
+			<Button type='button' variant='outline' onClick={() => setReview({ ...review, destinations: [...(review.destinations || []), { location: '', cargo: [{ type: '', quantity: 0 }] }] })}>Add stop</Button>
 		</div>
-	)
+		{(validation.error || applyError) && <p role='alert' className='text-sm text-destructive'>{validation.error || applyError}</p>}
+		<details className='rounded-lg border p-3 text-sm'><summary className='cursor-pointer min-h-10'>Advanced: recognition confidence and raw text</summary>
+			<p>Recognition confidence: {((ocrResult.left.confidence + ocrResult.right.confidence) / 2).toFixed(1)}%</p>
+			<pre className='whitespace-pre-wrap text-xs mt-3'>{ocrResult.combined}</pre>
+		</details>
+		<div className='flex flex-wrap justify-end gap-2'>
+			<Button type='button' variant='secondary' onClick={onNewImage}>New image</Button>
+			<Button type='button' variant='secondary' onClick={onClose}>Cancel</Button>
+			<Button type='button' disabled={!!validation.error} onClick={apply}>Apply to run</Button>
+		</div>
+	</div>
 }
-
-export { Results }

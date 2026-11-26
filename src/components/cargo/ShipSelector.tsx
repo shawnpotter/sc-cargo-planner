@@ -22,6 +22,7 @@ export default function ShipSelector({
 	const [searchQuery, setSearchQuery] = useState('')
 
 	const filteredShips = ships.filter((ship) =>
+		ship.totalCapacity > 0 && ship.cargoGrids.length > 0 &&
 		ship.name.toLowerCase().includes(searchQuery.toLowerCase())
 	)
 
@@ -44,6 +45,7 @@ export default function ShipSelector({
 			</div>
 
 			<div className='grid gap-2 overflow-y-auto max-h-92'>
+				{filteredShips.length === 0 && <p className='p-4 text-sm text-muted-foreground'>No supported cargo ships match your search.</p>}
 				{filteredShips.map((ship) => (
 					<Button
 						key={ship.name}

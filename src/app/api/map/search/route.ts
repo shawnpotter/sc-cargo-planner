@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { searchLocations } from '@/lib/map/serverClient'
+import { readDatasetMetadata } from '@/lib/map/metadata'
 
 export async function GET(request: NextRequest) {
   const query = request.nextUrl.searchParams.get('q')
@@ -15,10 +16,11 @@ export async function GET(request: NextRequest) {
   }
 
   try {
-    const results = await searchLocations(query, system, Number.isNaN(limit) ? 30 : limit)
+    const { data: results, meta } = await searchLocations(query, system, Number.isNaN(limit) ? 30 : limit)
     return NextResponse.json({
       data: results,
       meta: {
+        ...readDatasetMetadata(meta),
         count: results.length,
         query,
         system: system ?? null,

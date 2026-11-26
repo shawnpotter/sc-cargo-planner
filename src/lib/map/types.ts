@@ -5,6 +5,11 @@ export interface MapApiEnvelope<T> {
   meta?: Record<string, unknown>
 }
 
+export interface MapDatasetMetadata {
+  datasetId?: string
+  datasetVersion?: string
+}
+
 export interface MapApiLocation {
   id: string
   name: string
@@ -29,7 +34,18 @@ export interface MapApiLocation {
   system?: string
 }
 
-export interface NormalizedMapResponse {
+export interface MapBodyLocations {
+  bodyEntityName: string
+  locations: MapApiLocation[]
+}
+
+export interface MapSystemLocationsResponse extends MapApiEnvelope<MapApiLocation[]> {
+  bodyLocations: MapBodyLocations[]
+  contextWarnings: string[]
+}
+
+export interface NormalizedMapResponse extends MapDatasetMetadata {
+  contextWarnings: string[]
   locations: Location[]
   system: string
   count: number

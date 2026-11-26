@@ -27,6 +27,15 @@ export function validateContractsForSubmission(
 		}
 	}
 
+	for (const contract of contracts) {
+		if (!contract.origin?.trim() || ![1, 2, 4, 8, 16, 24, 32].includes(contract.maxContainerSize) ||
+			!contract.deliveryPoints.length || (contract.payout !== undefined && (!Number.isFinite(contract.payout) || contract.payout < 0)) ||
+			contract.deliveryPoints.some(point => !point.location?.trim() || !point.cargo.length ||
+				point.cargo.some(cargo => !cargo.cargoType.trim() || !Number.isInteger(cargo.quantity) || cargo.quantity <= 0))) {
+			return { isValid: false, title: 'Invalid contract', description: 'Check the origin, destinations, cargo names, positive whole SCU quantities, container limit, and payout.' }
+		}
+	}
+
 	// Validate end location for open path routes
 	if (routeType === 'path' && !endLocation) {
 		return {
@@ -58,14 +67,8 @@ export function isScannerAvailable(): { available: boolean; reason?: string } {
 		return { available: true } // SSR, assume available
 	}
 
-	const isMobile = /Mobi|Android|iPhone|iPad|iPod/i.test(navigator.userAgent)
-
-	if (isMobile) {
-		return {
-			available: false,
-			reason: 'Scanner not available on mobile',
-		}
+	if (typeof FileReader === 'undefined' || typeof Worker === 'undefined') {
+		return { available: false, reason: 'This browser does not support image scanning. Try a current browser with file and worker support.' }
 	}
-
 	return { available: true }
 }

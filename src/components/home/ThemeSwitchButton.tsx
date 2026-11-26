@@ -1,6 +1,11 @@
 import { useTheme } from 'next-themes'
 import { Button } from '@/components/ui/button'
 import { SunIcon, MoonIcon } from '@heroicons/react/24/outline'
+import { useSyncExternalStore } from 'react'
+
+const subscribe = () => () => {}
+const clientSnapshot = () => true
+const serverSnapshot = () => false
 
 /**
  * A button component that toggles between light and dark themes.
@@ -12,13 +17,15 @@ import { SunIcon, MoonIcon } from '@heroicons/react/24/outline'
  */
 export function ThemeSwitchButton() {
 	const { theme, setTheme, resolvedTheme } = useTheme()
-	const isDark = (resolvedTheme ?? theme) === 'dark'
+	const mounted = useSyncExternalStore(subscribe, clientSnapshot, serverSnapshot)
+	const isDark = mounted && (resolvedTheme ?? theme) === 'dark'
 
 	return (
 		<Button
 			variant='ghost'
 			size='icon'
 			aria-label='Toggle theme'
+			disabled={!mounted}
 			onClick={() => setTheme(isDark ? 'light' : 'dark')}
 			className='transition-colors duration-200'
 		>

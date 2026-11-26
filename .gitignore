@@ -2,6 +2,8 @@
 
 # dependencies
 /node_modules
+/.node_modules-before-beta/
+/output/playwright/
 /.pnp
 .pnp.*
 .yarn/*
@@ -44,5 +46,5 @@ next-env.d.ts
 # tesseract.js training data
 *.traineddata
 
-package-lock.json
 *.ctm
+BETA_FINISHING_SPEC.md

@@ -142,7 +142,7 @@ function ContainerVoxel({
 
 	const contract = contracts[container.contractIndex]
 	const deliveryPoint = contract?.deliveryPoints[container.deliveryIndex]
-	const rawCargoType = deliveryPoint?.cargo[0]?.cargoType ?? 'Unknown'
+	const rawCargoType = deliveryPoint?.cargo[container.cargoTypeIndex ?? 0]?.cargoType ?? 'Unknown'
 	const cargoType = rawCargoType.toUpperCase()
 
 	// Use the color scheme for the cargo type, or a default if not found

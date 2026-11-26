@@ -1,9 +1,7 @@
 // @/providers/Providers.tsx
 import React from 'react'
 import { ThemeProvider } from '@/providers/ThemeProvider'
-import SessionProvider from '@/providers/SessionProvider'
-import { ContractProvider } from '@/providers/ContractProvider'
-import { CargoProvider } from '@/providers/CargoProvider'
+import { RunProvider } from '@/providers/RunProvider'
 import { MapDataProvider } from '@/providers/MapDataProvider'
 
 export const Providers = ({ children }: { children: React.ReactNode }) => {
@@ -14,13 +12,9 @@ export const Providers = ({ children }: { children: React.ReactNode }) => {
 			enableSystem
 			disableTransitionOnChange
 		>
-			<SessionProvider>
 				<MapDataProvider>
-					<ContractProvider>
-						<CargoProvider>{children}</CargoProvider>
-					</ContractProvider>
+					<RunProvider>{children}</RunProvider>
 				</MapDataProvider>
-			</SessionProvider>
 		</ThemeProvider>
 	)
 }

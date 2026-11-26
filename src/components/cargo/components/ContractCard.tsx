@@ -1,5 +1,7 @@
 import React from 'react'
 import { Contract, DeliveryPoint } from '@/constants/types'
+import { Input } from '@/components/ui/input'
+import { LocationSearch } from '@/components/cargo/LocationSearch'
 import { Button } from '@/components/ui/button'
 import { CargoItem } from '@/components/cargo/types'
 
@@ -9,6 +11,8 @@ interface ContractCardProps {
 	onRemove?: (id: string) => void
 	onRemoveDeliveryPoint?: (index: number) => void
 	onSave?: () => void
+	onEdit?: () => void
+	onChangeDeliveryPoints?: (points: DeliveryPoint[]) => void
 	variant?: 'current' | 'saved'
 }
 
@@ -18,12 +22,14 @@ export function ContractCard({
 	onRemove,
 	onRemoveDeliveryPoint,
 	onSave,
+	onEdit,
+	onChangeDeliveryPoints,
 	variant = 'saved',
 }: ContractCardProps) {
 	const isCurrent = variant === 'current'
 
 	return (
-		<div className='bg-gray-700 p-2 rounded'>
+		<div className='bg-background/70 border border-primary/20 p-3 rounded-lg'>
 			<div className='flex justify-between items-center'>
 				<div className='flex items-center gap-2'>
 					<h3 className='text-base font-medium'>{contract.origin}</h3>
@@ -33,6 +39,7 @@ export function ContractCard({
 						</span>
 					)}
 				</div>
+				{onEdit && <Button type='button' variant='outline' size='sm' onClick={onEdit}>Edit</Button>}
 				{onRemove && contract.id && (
 					<button
 						onClick={(e) => {
@@ -70,7 +77,7 @@ export function ContractCard({
 									className='mb-2'
 								>
 									<div className='flex justify-between items-center'>
-										<h4 className='font-medium'>{point.location}</h4>
+										{contract.id && onChangeDeliveryPoints ? <div className='flex-1 mr-2'><label htmlFor={`edit-location-${point.id}`}>Stop {index + 1} location</label><LocationSearch id={`edit-location-${point.id}`} value={point.location} onValueChange={location => onChangeDeliveryPoints(contract.deliveryPoints?.map((item, i) => i === index ? { ...item, location } : item) || [])} /></div> : <h4 className='font-medium'>{point.location}</h4>}
 										{onRemoveDeliveryPoint && (
 											<button
 												onClick={(e) => {
@@ -84,11 +91,14 @@ export function ContractCard({
 										)}
 									</div>
 									<ul className='text-sm ml-2 mt-1'>
-										{point.cargo?.map((cargo: CargoItem) => (
+										{point.cargo?.map((cargo: CargoItem, cargoIndex) => (
 											<li
 												key={cargo.id ?? `${cargo.cargoType}-${cargo.quantity}`}
 											>
-												{cargo.cargoType}: {cargo.quantity} SCU
+												{contract.id && onChangeDeliveryPoints ? <div className='grid sm:grid-cols-2 gap-2 my-2'>
+													<label>Cargo {index + 1}.{cargoIndex + 1}<Input value={cargo.cargoType} onChange={event => onChangeDeliveryPoints(contract.deliveryPoints?.map((item, i) => i === index ? { ...item, cargo: item.cargo.map((entry, j) => j === cargoIndex ? { ...entry, cargoType: event.target.value } : entry) } : item) || [])} /></label>
+													<label>Quantity {index + 1}.{cargoIndex + 1} (SCU)<Input type='number' min='1' step='1' value={cargo.quantity} onChange={event => onChangeDeliveryPoints(contract.deliveryPoints?.map((item, i) => i === index ? { ...item, cargo: item.cargo.map((entry, j) => j === cargoIndex ? { ...entry, quantity: Number(event.target.value) } : entry), quantity: item.cargo.reduce((sum, entry, j) => sum + (j === cargoIndex ? Number(event.target.value) : entry.quantity), 0) } : item) || [])} /></label>
+												</div> : <>{cargo.cargoType}: {cargo.quantity} SCU</>}
 											</li>
 										))}
 									</ul>
@@ -136,7 +146,7 @@ export function ContractCard({
 						}}
 						variant='default'
 					>
-						Save Contract
+						{contract.id ? 'Update Contract' : 'Save Contract'}
 					</Button>
 				</div>
 			)}

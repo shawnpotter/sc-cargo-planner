@@ -14,6 +14,11 @@ import { ContractForm } from '@/components/cargo/ContractForm'
 import { HaulingMode } from '@/utils/calculateContainers'
 import { ContractProvider } from '@/providers/ContractProvider'
 import { CargoProvider } from '@/providers/CargoProvider'
+import { createInitialRun } from '@/lib/run/state'
+import { encodeRunSnapshot, RUN_STORAGE_KEY } from '@/lib/run/snapshot'
+import { buildCargoPlan } from '@/utils/handleLoadCargo'
+import { ships } from '@/data/ships'
+import type { Contract } from '@/constants/types'
 import {
 	addDraftToCurrentContract,
 	buildBasicDeliveryDraft,
@@ -21,21 +26,8 @@ import {
 	setJourneyStartLocation,
 } from './contractFormTestUtils'
 
-// Mock the hooks
-const mockSaveContracts = vi.fn()
-const mockContractAPI = {
-	saveContracts: mockSaveContracts,
-	loading: false,
-	error: null,
-	fetchContracts: vi.fn(),
-	updateContract: vi.fn(),
-	deleteContract: vi.fn(),
-	clearAllContracts: vi.fn(),
-}
-
-vi.mock('@/hooks/useContractAPI', () => ({
-	useContractAPI: () => mockContractAPI,
-}))
+const mockFetch = vi.fn()
+const mockMapSystems = vi.hoisted(() => ({ availableSystems: ['stanton'] }))
 
 // Mock MapDataProvider so ContractForm's useMapData() call works without a provider
 vi.mock('@/providers/MapDataProvider', () => ({
@@ -45,7 +37,7 @@ vi.mock('@/providers/MapDataProvider', () => ({
 		error: null,
 		system: 'stanton',
 		cached: false,
-		availableSystems: ['stanton'],
+		availableSystems: mockMapSystems.availableSystems,
 		refresh: vi.fn(),
 	}),
 	MapDataProvider: ({ children }: { children: React.ReactNode }) => children,
@@ -93,15 +85,18 @@ vi.mock('@/components/cargo/LocationSearch', () => ({
 		onValueChange,
 		placeholder,
 		id,
+		filterSystem,
 	}: {
 		value?: string
 		onValueChange?: (value: string) => void
 		placeholder?: string
 		id?: string
+		filterSystem?: string
 	}) => (
 		<input
 			data-testid='location-search'
 			id={id}
+			data-filter-system={filterSystem}
 			aria-label={placeholder || 'Search locations...'}
 			value={value || ''}
 			placeholder={placeholder}
@@ -132,9 +127,10 @@ describe('ContractForm', () => {
 		// Ensure previous renders are cleaned up to avoid state leaking between tests
 		cleanup()
 		vi.clearAllMocks()
-		// Reset mock implementations
-		mockContractAPI.loading = false
-		mockContractAPI.error = null
+		window.localStorage.clear()
+		mockMapSystems.availableSystems = ['stanton']
+		vi.stubGlobal('Worker', class {})
+		vi.stubGlobal('fetch', mockFetch)
 	})
 
 	const renderComponent = (props = {}) => {
@@ -194,6 +190,22 @@ describe('ContractForm', () => {
 	})
 
 	describe('Route Type Toggle', () => {
+		it('uses discovered systems, defaults to an available system, and retains the selected system after updates', () => {
+			mockMapSystems.availableSystems = ['terra', 'nyx']
+			const rendered = renderComponent()
+			const systemSelector = screen.getByLabelText('Current System')
+			expect(systemSelector).toHaveTextContent('Terra')
+			expect(screen.getByLabelText('Search starting location...')).toHaveAttribute('data-filter-system', 'terra')
+			fireEvent.keyDown(systemSelector, { key: 'ArrowDown' })
+			expect(screen.getByRole('option', { name: 'Terra' })).toBeInTheDocument()
+			expect(screen.queryByRole('option', { name: 'Stanton' })).not.toBeInTheDocument()
+			fireEvent.click(screen.getByRole('option', { name: 'Nyx' }))
+			mockMapSystems.availableSystems = ['terra', 'nyx', 'sol']
+			rendered.rerender(<TestWrapper><ContractForm {...defaultProps} /></TestWrapper>)
+			expect(systemSelector).toHaveTextContent('Nyx')
+			expect(screen.getByLabelText('Search starting location...')).toHaveAttribute('data-filter-system', 'nyx')
+		})
+
 		it('should show end location selector when Path is selected', () => {
 			renderComponent()
 
@@ -497,8 +509,90 @@ describe('ContractForm', () => {
 
 			// The form should submit successfully because the unsaved current contract is saved during submission
 			await waitFor(() => {
-				expect(mockOnSubmit).toHaveBeenCalled()
+				expect(mockOnSubmit).toHaveBeenCalledWith([expect.objectContaining({
+					origin: 'Baijini Point', deliveryPoints: [expect.objectContaining({ location: 'Riker Memorial Spaceport', cargo: [expect.objectContaining({ cargoType: 'Copper', quantity: 2 })] })],
+				})], 'Baijini Point', undefined)
+				expect(mockFetch).not.toHaveBeenCalled()
 			})
+		})
+
+		it('blocks repeated Generate actions during the same submission', async () => {
+			renderComponent()
+			buildBasicDeliveryDraft({ startLocation: 'Baijini Point', origin: 'Baijini Point', destination: 'Riker Memorial Spaceport', cargoType: 'Copper', quantity: 2 })
+			addDraftToCurrentContract()
+			const generate = screen.getByRole('button', { name: 'Generate Layout' })
+			fireEvent.click(generate)
+			fireEvent.click(generate)
+			await waitFor(() => expect(mockOnSubmit).toHaveBeenCalledTimes(1))
+			expect(screen.getByText('Saved Contracts (1)')).toBeInTheDocument()
+		})
+
+		it('keeps an unsaved draft intact when journey validation fails', async () => {
+			renderComponent()
+			buildBasicDeliveryDraft({ startLocation: 'Baijini Point', origin: 'Baijini Point', destination: 'Riker Memorial Spaceport', cargoType: 'Copper', quantity: 2 })
+			addDraftToCurrentContract()
+			fireEvent.click(screen.getByRole('button', { name: 'Path' }))
+			fireEvent.click(screen.getByRole('button', { name: 'Generate Layout' }))
+			expect(await screen.findByText('End location required')).toBeInTheDocument()
+			fireEvent.click(screen.getByRole('button', { name: 'OK' }))
+			expect(screen.getByRole('button', { name: 'Save Contract' })).toBeInTheDocument()
+			expect(screen.queryByText('Saved Contracts (1)')).not.toBeInTheDocument()
+			expect(mockOnSubmit).not.toHaveBeenCalled()
+		})
+
+		it('shows generation failure and retains the contract for retry without duplicating it', async () => {
+			renderComponent({ onSubmit: () => { throw new Error('Copper does not fit the selected ship') } })
+			buildBasicDeliveryDraft({ startLocation: 'Baijini Point', origin: 'Baijini Point', destination: 'Riker Memorial Spaceport', cargoType: 'Copper', quantity: 2 })
+			addDraftToCurrentContract()
+			fireEvent.click(screen.getByRole('button', { name: 'Generate Layout' }))
+			expect(await screen.findByText('Copper does not fit the selected ship')).toBeInTheDocument()
+			fireEvent.click(screen.getByRole('button', { name: 'OK' }))
+			fireEvent.click(screen.getByRole('button', { name: 'Generate Layout' }))
+			expect(await screen.findByText('Copper does not fit the selected ship')).toBeInTheDocument()
+			expect(screen.getByText('Saved Contracts (1)')).toBeInTheDocument()
+			expect(mockFetch).not.toHaveBeenCalled()
+		})
+
+		it('edits saved contract fields and submits one updated contract with its original id', async () => {
+			renderComponent()
+			buildBasicDeliveryDraft({ startLocation: 'Baijini Point', origin: 'Baijini Point', destination: 'Riker Memorial Spaceport', cargoType: 'Copper', quantity: 2 })
+			addDraftToCurrentContract()
+			saveCurrentContract()
+			fireEvent.click(screen.getByRole('button', { name: 'Generate Layout' }))
+			await waitFor(() => expect(mockOnSubmit).toHaveBeenCalledTimes(1))
+			const originalId = mockOnSubmit.mock.calls[0][0][0].id
+			fireEvent.click(screen.getByRole('button', { name: 'Edit' }))
+			fireEvent.change(screen.getByLabelText('Cargo 1.1'), { target: { value: 'Iron' } })
+			fireEvent.change(screen.getByLabelText('Quantity 1.1 (SCU)'), { target: { value: '7' } })
+			fireEvent.change(screen.getByLabelText('Contract Payout'), { target: { value: '1000' } })
+			fireEvent.click(screen.getByRole('button', { name: 'Generate Layout' }))
+			await waitFor(() => expect(mockOnSubmit).toHaveBeenCalledTimes(2))
+			expect(mockOnSubmit.mock.calls[1][0]).toEqual([expect.objectContaining({ id: originalId, payout: 1000, deliveryPoints: [expect.objectContaining({ quantity: 7, cargo: [expect.objectContaining({ cargoType: 'Iron', quantity: 7 })] })] })])
+			expect(screen.getByText('Saved Contracts (1)')).toBeInTheDocument()
+		})
+
+		it('edits a saved pickup contract delivery destination and generates the corrected delivery visit', async () => {
+			const pickup: Contract = {
+				id: 'pickup-existing', contractType: 'pickup', origin: 'Baijini Point', maxContainerSize: 4,
+				deliveryPoints: [{ id: 'pickup-stop', location: 'Port Tressler', quantity: 2, cargo: [{ cargoType: 'Copper', quantity: 2 }] }],
+			}
+			window.localStorage.setItem(RUN_STORAGE_KEY, encodeRunSnapshot({
+				...createInitialRun(), startLocation: 'Baijini Point', contracts: [pickup],
+			}))
+			renderComponent()
+			fireEvent.click(screen.getByRole('button', { name: 'Edit' }))
+			fireEvent.change(screen.getByLabelText('Delivery destination'), { target: { value: 'Everus Harbor' } })
+			fireEvent.click(screen.getByRole('button', { name: 'Generate Layout' }))
+			await waitFor(() => expect(mockOnSubmit).toHaveBeenCalledTimes(1))
+			const [submittedContracts, startLocation, endLocation] = mockOnSubmit.mock.calls[0]
+			expect(submittedContracts).toEqual([{ ...pickup, origin: 'Everus Harbor' }])
+			const plan = buildCargoPlan({ contracts: submittedContracts, selectedShip: ships[0], startLocation, endLocation })
+			if (!plan.success) throw new Error(plan.error)
+			expect(plan.optimizedRoute.stops.map(stop => ({ location: stop.location, type: stop.type }))).toEqual([
+				{ location: 'Port Tressler', type: 'pickup' },
+				{ location: 'Everus Harbor', type: 'delivery' },
+			])
+			expect(screen.getByText('Saved Contracts (1)')).toBeInTheDocument()
 		})
 	})
 
@@ -520,7 +614,7 @@ describe('ContractForm', () => {
 			expect(scanner).toBeTruthy()
 		})
 
-		it('should show alert on mobile', async () => {
+		it('should open scanner on tablet and mobile browsers with supported APIs', async () => {
 			Object.defineProperty(navigator, 'userAgent', {
 				value: 'Mozilla/5.0 (iPhone; CPU iPhone OS 14_0 like Mac OS X)',
 				configurable: true,
@@ -533,10 +627,7 @@ describe('ContractForm', () => {
 			})[0]
 			fireEvent.click(scanButton)
 
-			const alertText = await screen.findByText(
-				'Scanner not available on mobile',
-			)
-			expect(alertText).toBeTruthy()
+			expect(await screen.findByTestId('ocr-scanner')).toBeTruthy()
 		})
 	})
 
@@ -550,7 +641,7 @@ describe('ContractForm', () => {
 			expect(mockOnReset).toHaveBeenCalled()
 		})
 
-		it('should reset route type to Loop when clicking reset', () => {
+		it('preserves route and draft while the workspace requests discard confirmation', () => {
 			renderComponent()
 
 			// Switch to Path mode
@@ -562,11 +653,8 @@ describe('ContractForm', () => {
 			const resetButton = screen.getAllByRole('button', { name: 'Reset' })[0]
 			fireEvent.click(resetButton)
 
-			// Should be back to Loop mode
-			expect(screen.queryByText('End Location')).not.toBeInTheDocument()
-			expect(
-				screen.getByText(/Route will return to the port of origin/),
-			).toBeInTheDocument()
+			expect(mockOnReset).toHaveBeenCalledTimes(1)
+			expect(screen.getByText('End Location')).toBeInTheDocument()
 		})
 	})
 })

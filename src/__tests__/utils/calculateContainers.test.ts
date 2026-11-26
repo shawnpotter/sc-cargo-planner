@@ -50,15 +50,15 @@ describe('calculateContainers', () => {
 			expect(calculateOptimalContainerSize(2, 1, HaulingMode.CONTRACT)).toBe(1)
 		})
 
-		it('should halve container size until it fits', () => {
+		it('should select supported sizes within the remainder', () => {
 			// Starting with 32, should halve to 16, then 8 to fit 7
 			expect(calculateOptimalContainerSize(32, 7, HaulingMode.CONTRACT)).toBe(4)
 
 			// Starting with 32, should halve to 16, then 8, then 4, then 2 to fit 3
 			expect(calculateOptimalContainerSize(32, 3, HaulingMode.CONTRACT)).toBe(2)
 
-			// Starting with 24, should halve to 12, then 6, then 3 to fit 3
-			expect(calculateOptimalContainerSize(24, 3, HaulingMode.CONTRACT)).toBe(3)
+			// A 24 SCU limit still requires supported 2 + 1 SCU boxes for a 3 SCU remainder.
+			expect(calculateOptimalContainerSize(24, 3, HaulingMode.CONTRACT)).toBe(2)
 		})
 	})
 
@@ -130,9 +130,9 @@ describe('calculateContainers', () => {
 			)
 		})
 
-		it('should default to 1 when no valid size found', () => {
+		it('should return zero when no valid size fits', () => {
 			expect(calculateOptimalContainerSize(32, 0, HaulingMode.COMMODITY)).toBe(
-				1
+				0
 			)
 		})
 	})
@@ -141,8 +141,8 @@ describe('calculateContainers', () => {
 		it('should handle zero and negative quantities gracefully', () => {
 			expect(calculateOptimalContainerSize(32, 0, HaulingMode.CONTRACT)).toBe(0)
 			expect(calculateOptimalContainerSize(32, 0, HaulingMode.COMMODITY)).toBe(
-				1
-			) // defaults to 1
+				0
+			) // no container needed
 		})
 
 		it('should handle very large quantities', () => {
@@ -156,7 +156,7 @@ describe('calculateContainers', () => {
 
 		it('should handle non-standard max container sizes', () => {
 			expect(calculateOptimalContainerSize(10, 20, HaulingMode.CONTRACT)).toBe(
-				10
+				8
 			)
 			expect(calculateOptimalContainerSize(10, 5, HaulingMode.COMMODITY)).toBe(
 				4

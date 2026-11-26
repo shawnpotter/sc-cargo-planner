@@ -49,16 +49,19 @@ export function LocationSearch({
 		[locations, filterSystem],
 	)
 
-	// The text shown in the input — mirrors the selected value's name
-	const [query, setQuery] = useState(value)
+	// Track the prop value alongside local typing so external resets are applied
+	// during render, before the input can display a stale query for one frame.
+	const [queryState, setQueryState] = useState({
+		externalValue: value,
+		query: value,
+	})
+	if (queryState.externalValue !== value) {
+		setQueryState({ externalValue: value, query: value })
+	}
+	const query = queryState.query
 	const [open, setOpen] = useState(false)
 	const containerRef = useRef<HTMLDivElement>(null)
 	const [activeIndex, setActiveIndex] = useState(-1)
-
-	// Keep input text in sync when external value changes (e.g. reset)
-	useEffect(() => {
-		setQuery(value)
-	}, [value])
 
 	const suggestions = useMemo(() => {
 		const q = query.trim().toLowerCase()
@@ -69,14 +72,14 @@ export function LocationSearch({
 	}, [query, selectableLocations])
 
 	const commit = (name: string) => {
-		setQuery(name)
+		setQueryState({ externalValue: value, query: name })
 		setOpen(false)
 		setActiveIndex(-1)
 		onValueChange?.(name)
 	}
 
 	const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-		setQuery(e.target.value)
+		setQueryState({ externalValue: value, query: e.target.value })
 		setOpen(true)
 		setActiveIndex(-1)
 		if (e.target.value === '') {

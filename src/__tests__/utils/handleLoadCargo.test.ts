@@ -31,11 +31,11 @@ const makeContract = (
 })
 
 describe('handleLoadCargo - Unit Tests', () => {
-	let mockSetContainers: ReturnType<typeof vi.fn>
+	let mockSetContainers: ReturnType<typeof vi.fn<(containers: Container[]) => void>>
 
 	beforeEach(() => {
 		vi.clearAllMocks()
-		mockSetContainers = vi.fn()
+		mockSetContainers = vi.fn<(containers: Container[]) => void>()
 	})
 
 	describe('FILO (First In, Last Out) Loading', () => {
@@ -90,7 +90,7 @@ describe('handleLoadCargo - Unit Tests', () => {
 			expect(mockSetContainers).toHaveBeenCalled()
 			const containers = mockSetContainers.mock.calls[
 				mockSetContainers.mock.calls.length - 1
-			][0] as Container[]
+			][0]
 
 			// Should have created containers totaling 10 SCU
 			const totalSCU = containers.reduce((sum, c) => sum + c.size, 0)
@@ -127,26 +127,20 @@ describe('handleLoadCargo - Unit Tests', () => {
 
 			const containers = mockSetContainers.mock.calls[
 				mockSetContainers.mock.calls.length - 1
-			][0] as Container[]
+			][0]
 
 			// Should have created containers totaling 20 SCU
 			const totalSCU = containers.reduce((sum, c) => sum + c.size, 0)
 			expect(totalSCU).toBe(20)
 			expect(containers.length).toBeGreaterThan(0)
 
-			// TODO: Currently cargoTypeIndex is not set by handleLoadCargo
-			// This test documents the expected behavior for future implementation
-			// For now, we just verify containers were created
-			// const cargoType0 = containers.filter((c) => c.cargoTypeIndex === 0)
-			// const cargoType1 = containers.filter((c) => c.cargoTypeIndex === 1)
-			// expect(cargoType0.length).toBeGreaterThan(0)
-			// expect(cargoType1.length).toBeGreaterThan(0)
+			expect(containers.filter((c) => c.cargoTypeIndex === 0).reduce((sum, c) => sum + c.size, 0)).toBe(12)
+			expect(containers.filter((c) => c.cargoTypeIndex === 1).reduce((sum, c) => sum + c.size, 0)).toBe(8)
 		})
 	})
 
 	describe('Error Handling', () => {
-		it('logs warning when cargo cannot fit', () => {
-			const consoleSpy = vi.spyOn(console, 'warn').mockImplementation(() => {})
+		it('returns an actionable error and preserves the active plan when cargo cannot fit', () => {
 			const ship = makeShip()
 			const contracts = [
 				makeContract('Port Tressler', [
@@ -154,22 +148,18 @@ describe('handleLoadCargo - Unit Tests', () => {
 				]),
 			]
 
-			handleLoadCargo({
+			const result = handleLoadCargo({
 				contracts,
 				selectedShip: ship,
 				setContainers: mockSetContainers,
 			})
 
-			// With a 64 SCU ship, we can't fit all 100 SCU
-			// Should log a warning about remaining cargo
-			expect(consoleSpy).toHaveBeenCalledWith(
-				expect.stringContaining('Unable to fit remaining'),
-			)
-
-			consoleSpy.mockRestore()
+			expect(result.success).toBe(false)
+			if (!result.success) expect(result.error).toContain('General')
+			expect(mockSetContainers).not.toHaveBeenCalled()
 		})
 
-		it('clears existing containers before loading new ones', () => {
+		it('commits complete containers once after successful generation', () => {
 			const ship = makeShip()
 			const contracts = [
 				makeContract('Port Tressler', [
@@ -183,8 +173,8 @@ describe('handleLoadCargo - Unit Tests', () => {
 				setContainers: mockSetContainers,
 			})
 
-			// First call should clear
-			expect(mockSetContainers.mock.calls[0][0]).toEqual([])
+			// No preliminary clearing or partial callback.
+			expect(mockSetContainers).toHaveBeenCalledTimes(1)
 
 			// Last call should have new containers
 			const lastCall =
