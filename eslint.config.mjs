@@ -1,29 +1,7 @@
-import { dirname } from 'node:path'
-import { fileURLToPath } from 'node:url'
-import { FlatCompat } from '@eslint/eslintrc'
-
-const __filename = fileURLToPath(import.meta.url)
-const __dirname = dirname(__filename)
-
-const compat = new FlatCompat({
-	baseDirectory: __dirname,
-})
-
-const eslintConfig = [
-	...compat.extends('next/core-web-vitals', 'next/typescript'),
-	{
-		ignores: [
-			'node_modules/**',
-			'.next/**',
-			'out/**',
-			'build/**',
-			'next-env.d.ts',
-			'**/*.test.skip.ts',
-			'**/auth/signup/route.ts',
-			'**/user/update/route.ts',
-			'**/contracts/[id]/route.ts',
-		],
-	},
+import nextVitals from 'eslint-config-next/core-web-vitals'
+import nextTypescript from 'eslint-config-next/typescript'
+const config = [
+ ...nextVitals, ...nextTypescript,
+ { ignores: ['node_modules/**', '.node_modules-before-beta/**', '.next/**', 'out/**', 'build/**', 'next-env.d.ts', 'public/draco/**', '**/*.test.skip.ts', 'vitest-report.html'] },
 ]
-
-export default eslintConfig
+export default config

@@ -1,7 +1,7 @@
 // @/components/cargo/RouteChecklist.tsx
 'use client'
 
-import { useState, useMemo } from 'react'
+import { useState } from 'react'
 import { RouteStop, StopStatus } from '@/constants/types'
 import { cn } from '@/lib/utils'
 import {
@@ -15,7 +15,7 @@ import {
 } from '@heroicons/react/24/outline'
 import { CheckIcon } from '@heroicons/react/24/solid'
 import { Loader2 } from 'lucide-react'
-import { getNextStatus } from '@/providers/CargoProvider'
+import { getStopId } from '@/utils/stopIdentity'
 
 interface RouteChecklistProps {
 	stops: RouteStop[]
@@ -26,7 +26,10 @@ interface RouteChecklistProps {
 	isClosedLoop?: boolean
 	className?: string
 	stopStatuses: Record<string, StopStatus>
-	onStopStatusChange: (location: string) => void
+	onStopStatusChange: (visitId: string) => void
+	selectedStopId?: string | null
+	onSelectStop?: (id: string) => void
+	executionDisabled?: boolean
 }
 
 type TimelineNodeProps = {
@@ -34,6 +37,7 @@ type TimelineNodeProps = {
 	isStart?: boolean
 	isEnd?: boolean
 	onToggle?: () => void
+	disabled?: boolean
 	location: string
 }
 
@@ -59,6 +63,9 @@ type StopRowProps = {
 	status: StopStatus
 	isLast: boolean
 	onToggle: () => void
+	selected?: boolean
+	onSelect?: () => void
+	disabled?: boolean
 }
 
 // --- Sub-components ---
@@ -69,6 +76,7 @@ function TimelineNode({
 	isEnd,
 	onToggle,
 	location,
+	disabled,
 }: Readonly<TimelineNodeProps>) {
 	if (isStart) {
 		return (
@@ -96,9 +104,10 @@ function TimelineNode({
 		<button
 			type='button'
 			onClick={onToggle}
+			disabled={disabled}
 			aria-label={`Mark ${location} as ${statusLabels[status]}`}
 			className={cn(
-				'w-5 h-5 rounded-full border-2 flex items-center justify-center flex-shrink-0 transition-all duration-200',
+				'w-11 h-11 rounded-full border-2 flex items-center justify-center flex-shrink-0 transition-all duration-200 disabled:opacity-40 disabled:cursor-not-allowed',
 				status === 'completed' &&
 					'bg-green-500 border-green-500 shadow-[0_0_6px_rgba(34,197,94,0.3)]',
 				status === 'in-progress' &&
@@ -241,6 +250,9 @@ function StopRow({
 	status,
 	isLast,
 	onToggle,
+	selected,
+	onSelect,
+	disabled,
 }: Readonly<StopRowProps>) {
 	const [isExpanded, setIsExpanded] = useState(false)
 	const config = STOP_TYPE_CONFIG[stop.type]
@@ -270,6 +282,7 @@ function StopRow({
 		<div
 			className={cn(
 				'transition-colors duration-200',
+				selected && 'ring-2 ring-inset ring-primary',
 				status === 'completed' && 'bg-green-500/5',
 				status === 'in-progress' && 'bg-orange-500/5',
 			)}
@@ -280,6 +293,7 @@ function StopRow({
 					<TimelineNode
 						status={status}
 						onToggle={onToggle}
+						disabled={disabled}
 						location={stop.location}
 					/>
 					{!isLast && <ConnectorLine status={status} />}
@@ -299,14 +313,17 @@ function StopRow({
 						>
 							{displayIndex}.
 						</span>
-						<p
+						<button
+							type='button'
+							onClick={onSelect}
+							aria-pressed={selected}
 							className={cn(
-								'text-sm font-medium leading-5 min-w-0 flex-1',
+								'min-h-11 text-left text-sm font-medium leading-5 min-w-0 flex-1 hover:text-primary',
 								status === 'completed' && 'line-through text-muted-foreground',
 							)}
 						>
 							{stop.location}
-						</p>
+						</button>
 						<span
 							className={cn(
 								'flex items-center gap-1 text-xs px-1.5 py-0.5 rounded border flex-shrink-0',
@@ -337,7 +354,7 @@ function StopRow({
 							>
 								{statusLabel[status]}
 								{status === 'in-progress' &&
-									(stop.type === 'pickup' || stop.type === 'both') &&
+									stop.type === 'pickup' &&
 									' — Cargo loaded onto grid'}
 							</span>
 						</div>
@@ -381,74 +398,6 @@ function StopRow({
 	)
 }
 
-// --- Ordering utility ---
-
-/**
- * Orders stops by actual travel/unloading sequence.
- *
- * The `stops` array from the optimizer has `sequenceNumber` assigned in
- * LOADING order (FILO) — containers loaded first are delivered last.
- * For the checklist, we need TRAVEL order (where we actually go first).
- *
- * Travel order is:
- * 1. Pickup stops first (in ascending sequenceNumber order)
- * 2. Delivery stops in REVERSE sequenceNumber order (FILO → FIFO for travel)
- *
- * For "both" type stops (pickup AND delivery at same location), we treat
- * them as pickups if they appear early in the sequence, otherwise as
- * deliveries. This handles the edge case of returning to a location.
- */
-function orderStopsByTravelSequence(stops: RouteStop[]): RouteStop[] {
-	if (stops.length === 0) return []
-
-	// Separate pure pickup stops from stops that have deliveries
-	const pickupOnlyStops: RouteStop[] = []
-	const deliveryStops: RouteStop[] = [] // includes 'delivery' and 'both' types
-
-	// Find the minimum sequence number to identify "early" stops
-	const minSeq = Math.min(...stops.map((s) => s.sequenceNumber))
-
-	for (const stop of stops) {
-		if (stop.type === 'pickup') {
-			// Pure pickup — always goes first
-			pickupOnlyStops.push(stop)
-		} else if (stop.type === 'both' && stop.sequenceNumber === minSeq) {
-			// "Both" at the very start of the journey — treat as pickup-first
-			pickupOnlyStops.push(stop)
-		} else {
-			// Delivery or "both" that happens later — part of delivery sequence
-			deliveryStops.push(stop)
-		}
-	}
-
-	// Sort pickup stops by ascending sequence (first pickup first)
-	pickupOnlyStops.sort((a, b) => a.sequenceNumber - b.sequenceNumber)
-
-	// Sort delivery stops by DESCENDING sequence number
-	// This converts FILO (loading order) → travel order (unload accessible cargo first)
-	// Highest sequenceNumber = loaded first = at back = unload LAST in loading order
-	// But for travel, we visit the location where top cargo goes FIRST
-	// Top cargo = loaded LAST = lowest delivery sequenceNumber
-	// So we want ASCENDING by sequenceNumber for travel? Let me reconsider...
-	//
-	// Actually:
-	// - Loading order is FILO: load cargo for LAST delivery FIRST
-	// - So cargo with HIGH sequenceNumber (last delivery in loading order) is loaded FIRST
-	// - That cargo is at the BACK of the hold
-	// - We should UNLOAD front cargo first, which is LOW sequenceNumber cargo
-	// - So travel order for deliveries = ASCENDING sequenceNumber
-	//
-	// Wait, but the user said the display shows seq 2,3,4,5 (ascending) and that's FILO...
-	// Let me re-read: "Items 2-5 are the FILO Order" means the DISPLAY is showing FILO.
-	// The user wants to see: 5,4,3,2 (descending) which is travel order.
-	//
-	// So: current display = ascending seq = FILO (loading) order
-	//     desired display = descending seq = travel (unloading) order
-	deliveryStops.sort((a, b) => b.sequenceNumber - a.sequenceNumber)
-
-	return [...pickupOnlyStops, ...deliveryStops]
-}
-
 // --- Main Component ---
 
 /**
@@ -458,29 +407,31 @@ function orderStopsByTravelSequence(stops: RouteStop[]): RouteStop[] {
  * become visible on the cargo hold grid.
  *
  * Stops are displayed in TRAVEL order:
- * - Pickups first (where you load cargo)
- * - Deliveries in the order you should visit them (accessible cargo first)
+ * - Preserve every optimizer visit, including returns to the same location.
+ * - Unload before loading at combined visits.
  */
 function RouteChecklist({
 	stops,
-	route,
 	startLocation,
 	endLocation,
 	isClosedLoop = false,
 	className,
 	stopStatuses,
 	onStopStatusChange,
+	selectedStopId,
+	onSelectStop,
+	executionDisabled = false,
 }: Readonly<RouteChecklistProps>) {
 	const [isCollapsed, setIsCollapsed] = useState(false)
 
-	// Order stops by travel sequence (pickups first, then deliveries in unload order)
-	const orderedStops = useMemo(() => orderStopsByTravelSequence(stops), [stops])
+	// The optimizer already supplies travel order.
+	const orderedStops = stops
 
 	const completedCount = orderedStops.filter(
-		(stop) => stopStatuses[stop.location] === 'completed',
+		(stop) => stopStatuses[getStopId(stop)] === 'completed',
 	).length
 	const inProgressCount = orderedStops.filter(
-		(stop) => stopStatuses[stop.location] === 'in-progress',
+		(stop) => stopStatuses[getStopId(stop)] === 'in-progress',
 	).length
 	const totalCount = orderedStops.length
 	const progressPercent =
@@ -590,9 +541,12 @@ function RouteChecklist({
 							key={`${stop.location}-${stop.sequenceNumber}`}
 							stop={stop}
 							displayIndex={index + 1}
-							status={stopStatuses[stop.location] || 'idle'}
+							status={stopStatuses[getStopId(stop)] || 'idle'}
 							isLast={index === orderedStops.length - 1}
-							onToggle={() => onStopStatusChange(stop.location)}
+							onToggle={() => onStopStatusChange(getStopId(stop))}
+							selected={selectedStopId === getStopId(stop)}
+							onSelect={() => onSelectStop?.(getStopId(stop))}
+							disabled={executionDisabled || orderedStops.slice(0, index).some((earlier) => stopStatuses[getStopId(earlier)] !== 'completed')}
 						/>
 					))}
 

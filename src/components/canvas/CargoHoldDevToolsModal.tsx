@@ -1,4 +1,4 @@
-import { useEffect, useState, type ChangeEvent } from 'react'
+import { useState, type ChangeEvent } from 'react'
 
 type ModelTuningState = {
 	scale: number
@@ -36,6 +36,17 @@ function parseModelTuning(value: string, fallback: number) {
 }
 
 export function CargoHoldDevToolsModal({
+	...props
+}: Readonly<CargoHoldDevToolsModalProps>) {
+	return (
+		<CargoHoldDevToolsModalContent
+			key={props.cargoGridCount}
+			{...props}
+		/>
+	)
+}
+
+function CargoHoldDevToolsModalContent({
 	cargoGridCount,
 	modelTuning,
 	gridTuning,
@@ -51,15 +62,6 @@ export function CargoHoldDevToolsModal({
 	onRefreshPage,
 }: Readonly<CargoHoldDevToolsModalProps>) {
 	const [gridEditorIndex, setGridEditorIndex] = useState<number | null>(null)
-
-	useEffect(() => {
-		if (
-			gridEditorIndex !== null &&
-			(cargoGridCount === 0 || gridEditorIndex >= cargoGridCount)
-		) {
-			setGridEditorIndex(null)
-		}
-	}, [cargoGridCount, gridEditorIndex])
 
 	return (
 		<div className='absolute top-4 bottom-20 right-4 z-40 w-96 max-w-[calc(100%-2rem)] rounded-lg border border-border/40 bg-gradient-to-b from-background to-background/95 p-4 shadow-xl overflow-auto'>

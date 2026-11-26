@@ -56,6 +56,9 @@ export interface Contract {
 }
 
 export interface Container {
+	id?: string
+	pickupStopId?: string
+	deliveryStopId?: string
 	size: number
 	contractIndex: number
 	deliveryIndex: number
@@ -98,6 +101,7 @@ export interface RouteStop {
 	contractIndices: number[]
 	operations: {
 		pickups: Array<{
+			cargoTypeIndex?: number
 			cargoType: string
 			quantity: number
 			contractIndex: number
@@ -105,6 +109,7 @@ export interface RouteStop {
 			destinedFor: string // Where this cargo will be delivered
 		}>
 		deliveries: Array<{
+			cargoTypeIndex?: number
 			cargoType: string
 			quantity: number
 			contractIndex: number

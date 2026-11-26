@@ -26,7 +26,7 @@ import { LocationSearch } from '@/components/cargo/LocationSearch'
 import { RouteTypeToggle } from '@/components/cargo/RouteTypeToggle'
 import { CurrentContractSection } from '@/components/cargo/components/CurrentContractSection'
 import { ContractList } from '@/components/cargo/components/ContractList'
-import { isScannerAvailable } from '@/components/cargo/utils/contractValidation'
+import { isScannerAvailable, validateContractsForSubmission } from '@/components/cargo/utils/contractValidation'
 import { Contract } from '@/constants/types'
 import { useMapData } from '@/providers/MapDataProvider'
 import { cn } from '@/lib/utils'
@@ -75,7 +75,7 @@ function ContractForm({ onSubmit, onReset, haulingMode }: ContractFormProps) {
 		currentContract,
 		newDelivery,
 		showScanner,
-		apiLoading,
+		isSubmitting,
 		routeType,
 		endLocation,
 		startLocation,
@@ -87,6 +87,7 @@ function ContractForm({ onSubmit, onReset, haulingMode }: ContractFormProps) {
 		handleRemoveCargoFromDelivery,
 		handleSaveCurrentContract,
 		handleRemoveContract,
+		handleEditContract,
 		handleRemoveDeliveryPoint,
 		handleSubmit,
 		handleReset,
@@ -103,10 +104,11 @@ function ContractForm({ onSubmit, onReset, haulingMode }: ContractFormProps) {
 		closeAlert,
 	} = useAlertDialog()
 
-	useMapData() // ensure provider is present
-	const SYSTEMS = ['stanton', 'nyx', 'pyro'] as const
+	const { availableSystems } = useMapData()
 	const [isInterstellar, setIsInterstellar] = useState(false)
-	const [selectedSystem, setSelectedSystem] = useState<string>('stanton')
+	const [preferredSystem, setSelectedSystem] = useState('stanton')
+	const selectedSystem = availableSystems.includes(preferredSystem)
+		? preferredSystem : availableSystems[0] ?? ''
 	const filterSystem =
 		!isInterstellar && selectedSystem ? selectedSystem : undefined
 
@@ -144,6 +146,18 @@ function ContractForm({ onSubmit, onReset, haulingMode }: ContractFormProps) {
 			return
 		}
 
+		const validation = validateContractsForSubmission([{
+			...currentContract,
+			id: currentContract.id || 'draft',
+			contractType: currentContract.contractType || 'delivery',
+			origin: currentContract.origin || '',
+			maxContainerSize: currentContract.maxContainerSize ?? 4,
+			deliveryPoints: currentContract.deliveryPoints || [],
+		}], true, 'loop', null)
+		if (!validation.isValid) {
+			showAlert(validation.title || 'Invalid contract', validation.description || 'Check the contract fields.')
+			return
+		}
 		handleSaveCurrentContract()
 	}
 
@@ -177,7 +191,7 @@ function ContractForm({ onSubmit, onReset, haulingMode }: ContractFormProps) {
 				{/* LEFT COLUMN */}
 				<div className='md:col-span-1 flex flex-col gap-6'>
 					{/* Basic Configuration */}
-					<div className='bg-card border border-primary p-4 rounded shadow-sm flex flex-col gap-4'>
+					<div className='bg-card border border-primary/25 p-4 rounded-xl shadow-sm flex flex-col gap-4'>
 						<div className='flex items-center gap-2'>
 							<h3 className='text-lg font-semibold'>Contract Configuration</h3>
 							<InstructionHint
@@ -201,7 +215,7 @@ function ContractForm({ onSubmit, onReset, haulingMode }: ContractFormProps) {
 									updateCurrentContract({ contractType: value })
 								}
 							>
-								<SelectTrigger className='!dark:bg-accent-foreground bg-accent text-foreground w-full'>
+								<SelectTrigger id='contractType' className='bg-background text-foreground w-full'>
 									<SelectValue placeholder='Select type' />
 								</SelectTrigger>
 								<SelectContent>
@@ -226,7 +240,7 @@ function ContractForm({ onSubmit, onReset, haulingMode }: ContractFormProps) {
 									})
 								}
 							>
-								<SelectTrigger className='!dark:bg-accent-foreground bg-accent text-foreground w-full'>
+								<SelectTrigger id='maxContainerSize' className='bg-background text-foreground w-full'>
 									<SelectValue placeholder='Select size' />
 								</SelectTrigger>
 								<SelectContent>
@@ -263,29 +277,27 @@ function ContractForm({ onSubmit, onReset, haulingMode }: ContractFormProps) {
 							</div>
 						)}
 
-						{/* Origin field - only for delivery contracts */}
-						{currentContract.contractType === 'delivery' && (
-							<div>
-								<div className='flex items-center gap-2'>
-									<label htmlFor='origin'>
-										Pickup Location (Where cargo starts)
-									</label>
-									<InstructionHint
-										title={HINTS.pickupLocationDelivery.title}
-										description={HINTS.pickupLocationDelivery.description}
-									/>
-								</div>
-								<LocationSearch
-									id='origin'
-									value={currentContract.origin || ''}
-									onValueChange={(value) =>
-										updateCurrentContract({ origin: value })
-									}
-									placeholder='Search pickup location...'
-									filterSystem={filterSystem}
+						{/* Origin is the pickup source for delivery contracts and the final destination for pickup contracts. */}
+						<div>
+							<div className='flex items-center gap-2'>
+								<label htmlFor='origin'>
+									{currentContract.contractType === 'pickup' ? 'Delivery destination' : 'Pickup Location (Where cargo starts)'}
+								</label>
+								<InstructionHint
+									title={currentContract.contractType === 'pickup' ? 'Delivery destination' : HINTS.pickupLocationDelivery.title}
+									description={currentContract.contractType === 'pickup' ? 'Deliver all cargo collected for this contract to this location.' : HINTS.pickupLocationDelivery.description}
 								/>
 							</div>
-						)}
+							<LocationSearch
+								id='origin'
+								value={currentContract.origin || ''}
+								onValueChange={(value) =>
+									updateCurrentContract({ origin: value })
+								}
+								placeholder={currentContract.contractType === 'pickup' ? 'Search delivery destination...' : 'Search pickup location...'}
+								filterSystem={filterSystem}
+							/>
+						</div>
 
 						{/* pickup location override for pickup contracts */}
 						{currentContract.contractType === 'pickup' && (
@@ -328,7 +340,7 @@ function ContractForm({ onSubmit, onReset, haulingMode }: ContractFormProps) {
 				{/* RIGHT COLUMN */}
 				<div className='md:col-span-1 flex flex-col gap-6'>
 					{/* Journey configuration */}
-					<div className='bg-card border border-primary p-4 rounded shadow-sm flex flex-col gap-4'>
+					<div className='bg-card border border-primary/25 p-4 rounded-xl shadow-sm flex flex-col gap-4'>
 						<div className='flex items-center gap-2'>
 							<h3 className='text-lg font-semibold'>Journey Configuration</h3>
 							<InstructionHint
@@ -398,7 +410,7 @@ function ContractForm({ onSubmit, onReset, haulingMode }: ContractFormProps) {
 											<SelectValue placeholder='Select system' />
 										</SelectTrigger>
 										<SelectContent>
-											{SYSTEMS.map((sys) => (
+												{availableSystems.map((sys) => (
 												<SelectItem
 													key={sys}
 													value={sys}
@@ -478,7 +490,7 @@ function ContractForm({ onSubmit, onReset, haulingMode }: ContractFormProps) {
 
 					{/* Scanner Button */}
 					{haulingMode === HaulingMode.CONTRACT && (
-						<div className='bg-card border border-primary p-4 rounded shadow-sm'>
+						<div className='bg-card border border-primary/25 p-4 rounded-xl shadow-sm'>
 							<div className='flex flex-col items-center gap-3'>
 								<Button
 									onClick={handleScannerClick}
@@ -495,6 +507,7 @@ function ContractForm({ onSubmit, onReset, haulingMode }: ContractFormProps) {
 						currentContract={currentContract}
 						onRemoveDeliveryPoint={handleRemoveDeliveryPoint}
 						onSaveContract={handleSaveContractClick}
+						onChangeDeliveryPoints={deliveryPoints => updateCurrentContract({ deliveryPoints })}
 					/>
 
 					{/* Saved Contracts */}
@@ -502,6 +515,7 @@ function ContractForm({ onSubmit, onReset, haulingMode }: ContractFormProps) {
 						contracts={contracts}
 						haulingMode={haulingMode}
 						onRemoveContract={handleRemoveContract}
+						onEditContract={handleEditContract}
 					/>
 				</div>
 
@@ -512,14 +526,14 @@ function ContractForm({ onSubmit, onReset, haulingMode }: ContractFormProps) {
 						variant='default'
 						className='!bg-primary'
 						disabled={
-							apiLoading ||
+							isSubmitting ||
 							!startLocation ||
 							(contracts.length === 0 &&
 								(!currentContract.origin ||
 									!currentContract.deliveryPoints?.length))
 						}
 					>
-						{apiLoading ? 'Saving...' : 'Generate Layout'}
+						{isSubmitting ? 'Generating...' : 'Generate Layout'}
 					</Button>
 
 					<Button

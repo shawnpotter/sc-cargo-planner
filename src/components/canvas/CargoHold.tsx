@@ -1,5 +1,12 @@
 // @/components/canvas/CargoHold/CargoHold.tsx
-import { useEffect, useRef, useState, type PointerEventHandler } from 'react'
+import {
+	useCallback,
+	useMemo,
+	useRef,
+	useState,
+	useSyncExternalStore,
+	type PointerEventHandler,
+} from 'react'
 import { Canvas, ThreeEvent } from '@react-three/fiber'
 import { OrbitControls, Text } from '@react-three/drei'
 import { ContainerVoxel } from '@/components/canvas/ContainerVoxel'
@@ -54,6 +61,121 @@ function getDefaultCargoGridTuning(ship: Ship): CargoGridTuningState {
 function parseModelTuning(value: string, fallback: number) {
 	const parsed = Number(value)
 	return Number.isFinite(parsed) ? parsed : fallback
+}
+
+const TUNING_STORAGE_EVENT = 'cargo-tuning-storage-change'
+
+function subscribeToTuningStorage(
+	storageKey: string,
+	isDev: boolean,
+	onChange: () => void,
+) {
+	if (!isDev || typeof window === 'undefined') return () => {}
+
+	const handleStorage = (event: StorageEvent) => {
+		if (event.key === storageKey) onChange()
+	}
+	const handleLocalChange = (event: Event) => {
+		if (event instanceof CustomEvent && event.detail === storageKey) onChange()
+	}
+
+	window.addEventListener('storage', handleStorage)
+	window.addEventListener(TUNING_STORAGE_EVENT, handleLocalChange)
+	return () => {
+		window.removeEventListener('storage', handleStorage)
+		window.removeEventListener(TUNING_STORAGE_EVENT, handleLocalChange)
+	}
+}
+
+function useTuningStorageSnapshot(storageKey: string, isDev: boolean) {
+	const subscribe = useCallback(
+		(onChange: () => void) =>
+			subscribeToTuningStorage(storageKey, isDev, onChange),
+		[isDev, storageKey],
+	)
+	const getSnapshot = useCallback(() => {
+		if (!isDev || typeof window === 'undefined') return ''
+		try {
+			return window.localStorage.getItem(storageKey) ?? ''
+		} catch {
+			return ''
+		}
+	}, [isDev, storageKey])
+	const getServerSnapshot = useCallback(() => '', [])
+
+	return useSyncExternalStore(subscribe, getSnapshot, getServerSnapshot)
+}
+
+function isRecord(value: unknown): value is Record<string, unknown> {
+	return typeof value === 'object' && value !== null && !Array.isArray(value)
+}
+
+function parseTuningTuple(
+	value: unknown,
+	fallback: [number, number, number],
+): [number, number, number] {
+	if (!Array.isArray(value) || value.length !== 3) return fallback
+	return [
+		parseModelTuning(String(value[0]), fallback[0]),
+		parseModelTuning(String(value[1]), fallback[1]),
+		parseModelTuning(String(value[2]), fallback[2]),
+	]
+}
+
+function readModelTuning(
+	serialized: string,
+	fallback: ModelTuningState,
+): ModelTuningState {
+	if (!serialized) return fallback
+	try {
+		const parsed: unknown = JSON.parse(serialized)
+		if (!isRecord(parsed)) return fallback
+		return {
+			scale: parseModelTuning(String(parsed.scale), fallback.scale),
+			position: parseTuningTuple(parsed.position, fallback.position),
+			rotation: parseTuningTuple(parsed.rotation, fallback.rotation),
+			opacity: parseModelTuning(String(parsed.opacity), fallback.opacity),
+		}
+	} catch {
+		return fallback
+	}
+}
+
+function readCargoGridTuning(
+	serialized: string,
+	fallback: CargoGridTuningState,
+): CargoGridTuningState {
+	if (!serialized) return fallback
+	try {
+		const parsed: unknown = JSON.parse(serialized)
+		if (!isRecord(parsed)) return fallback
+
+		const loaded: CargoGridTuningState = {}
+		Object.entries(fallback).forEach(([index, defaultTuning]) => {
+			const saved = parsed[index]
+			if (!isRecord(saved)) {
+				loaded[Number(index)] = defaultTuning
+				return
+			}
+			loaded[Number(index)] = {
+				position: parseTuningTuple(saved.position, defaultTuning.position),
+				dimensions: parseTuningTuple(
+					saved.dimensions,
+					defaultTuning.dimensions,
+				),
+			}
+		})
+		return loaded
+	} catch {
+		return fallback
+	}
+}
+
+type TuningState<T> = {
+	shipName: string
+	defaultsKey: string
+	storageSnapshot: string
+	value: T
 }
 
 function CoordinateSystemHelper({
@@ -264,7 +386,7 @@ interface CargoHoldProps {
  * Renders the 3D cargo hold canvas for a ship.
  * Container selection state is now controlled by the parent.
  */
-function CargoHold({
+function CargoHoldContent({
 	ship,
 	containers,
 	contracts,
@@ -277,169 +399,86 @@ function CargoHold({
 	const [showCoordinateSystem, setShowCoordinateSystem] = useState(false)
 	const [showGridDebug, setShowGridDebug] = useState(false)
 	const [showDevTools, setShowDevTools] = useState(false)
-	const [modelTuning, setModelTuning] = useState<ModelTuningState>(() =>
-		getDefaultModelTuning(ship),
-	)
-	const [gridTuning, setGridTuning] = useState<CargoGridTuningState>(() =>
-		getDefaultCargoGridTuning(ship),
-	)
+	const modelDefaults = useMemo(() => getDefaultModelTuning(ship), [ship])
+	const gridDefaults = useMemo(() => getDefaultCargoGridTuning(ship), [ship])
+	const defaultsKey = JSON.stringify({ modelDefaults, gridDefaults })
 	const containerClickedRef = useRef(false)
 	const mouseDownPositionRef = useRef<{ x: number; y: number } | null>(null)
 	const mouseDragDetectedRef = useRef(false)
 	const suppressNextSelectionClickRef = useRef(false)
 	const modelTuningStorageKey = `cargo.model-tuning:${encodeURIComponent(ship.name)}`
 	const gridTuningStorageKey = `cargo.grid-tuning:${encodeURIComponent(ship.name)}`
-
-	useEffect(() => {
-		const defaults = getDefaultModelTuning(ship)
-
-		if (!isDev) {
-			setModelTuning(defaults)
-			return
-		}
-
-		try {
-			const saved = window.localStorage.getItem(modelTuningStorageKey)
-			if (!saved) {
-				setModelTuning(defaults)
-				return
-			}
-
-			const parsed = JSON.parse(saved) as Partial<ModelTuningState>
-			setModelTuning({
-				scale: typeof parsed.scale === 'number' ? parsed.scale : defaults.scale,
-				position:
-					Array.isArray(parsed.position) && parsed.position.length === 3
-						? [
-								parseModelTuning(
-									String(parsed.position[0]),
-									defaults.position[0],
-								),
-								parseModelTuning(
-									String(parsed.position[1]),
-									defaults.position[1],
-								),
-								parseModelTuning(
-									String(parsed.position[2]),
-									defaults.position[2],
-								),
-							]
-						: defaults.position,
-				rotation:
-					Array.isArray(parsed.rotation) && parsed.rotation.length === 3
-						? [
-								parseModelTuning(
-									String(parsed.rotation[0]),
-									defaults.rotation[0],
-								),
-								parseModelTuning(
-									String(parsed.rotation[1]),
-									defaults.rotation[1],
-								),
-								parseModelTuning(
-									String(parsed.rotation[2]),
-									defaults.rotation[2],
-								),
-							]
-						: defaults.rotation,
-				opacity:
-					typeof parsed.opacity === 'number'
-						? parsed.opacity
-						: defaults.opacity,
-			})
-		} catch {
-			setModelTuning(defaults)
-		}
-	}, [isDev, modelTuningStorageKey, ship])
-
-	useEffect(() => {
-		const defaults = getDefaultCargoGridTuning(ship)
-
-		if (!isDev) {
-			setGridTuning(defaults)
-			return
-		}
-
-		try {
-			const saved = window.localStorage.getItem(gridTuningStorageKey)
-			if (!saved) {
-				setGridTuning(defaults)
-				return
-			}
-
-			const parsed = JSON.parse(saved) as Partial<CargoGridTuningState>
-			const loaded: CargoGridTuningState = {}
-
-			Object.entries(defaults).forEach(([indexStr, defaultTuning]) => {
-				const index = Number(indexStr)
-				const savedTuning = parsed[index]
-
-				if (
-					savedTuning &&
-					Array.isArray(savedTuning.position) &&
-					Array.isArray(savedTuning.dimensions)
-				) {
-					loaded[index] = {
-						position: [
-							parseModelTuning(
-								String(savedTuning.position[0]),
-								defaultTuning.position[0],
-							),
-							parseModelTuning(
-								String(savedTuning.position[1]),
-								defaultTuning.position[1],
-							),
-							parseModelTuning(
-								String(savedTuning.position[2]),
-								defaultTuning.position[2],
-							),
-						],
-						dimensions: [
-							parseModelTuning(
-								String(savedTuning.dimensions[0]),
-								defaultTuning.dimensions[0],
-							),
-							parseModelTuning(
-								String(savedTuning.dimensions[1]),
-								defaultTuning.dimensions[1],
-							),
-							parseModelTuning(
-								String(savedTuning.dimensions[2]),
-								defaultTuning.dimensions[2],
-							),
-						],
-					}
-				} else {
-					loaded[index] = defaultTuning
-				}
-			})
-
-			setGridTuning(loaded)
-		} catch {
-			setGridTuning(defaults)
-		}
-	}, [isDev, gridTuningStorageKey, ship])
+	const modelTuningSnapshot = useTuningStorageSnapshot(
+		modelTuningStorageKey,
+		isDev,
+	)
+	const gridTuningSnapshot = useTuningStorageSnapshot(
+		gridTuningStorageKey,
+		isDev,
+	)
+	const [modelTuningState, setModelTuningState] =
+		useState<TuningState<ModelTuningState>>(() => ({
+			shipName: ship.name,
+			defaultsKey,
+			storageSnapshot: '',
+			value: modelDefaults,
+		}))
+	const [gridTuningState, setGridTuningState] =
+		useState<TuningState<CargoGridTuningState>>(() => ({
+			shipName: ship.name,
+			defaultsKey,
+			storageSnapshot: '',
+			value: gridDefaults,
+		}))
+	const modelTuning =
+		modelTuningState.shipName === ship.name &&
+		modelTuningState.defaultsKey === defaultsKey &&
+		modelTuningState.storageSnapshot === modelTuningSnapshot
+			? modelTuningState.value
+			: readModelTuning(modelTuningSnapshot, modelDefaults)
+	const gridTuning =
+		gridTuningState.shipName === ship.name &&
+		gridTuningState.defaultsKey === defaultsKey &&
+		gridTuningState.storageSnapshot === gridTuningSnapshot
+			? gridTuningState.value
+			: readCargoGridTuning(gridTuningSnapshot, gridDefaults)
 
 	const applyModelTuning = (next: ModelTuningState) => {
-		setModelTuning(next)
-		if (!isDev) return
+		setModelTuningState({
+			shipName: ship.name,
+			defaultsKey,
+			storageSnapshot: modelTuningSnapshot,
+			value: next,
+		})
+		if (!isDev || typeof window === 'undefined') return
 
 		try {
 			window.localStorage.setItem(modelTuningStorageKey, JSON.stringify(next))
 		} catch {
 			// Ignore localStorage failures in dev tuning mode.
 		}
+		window.dispatchEvent(
+			new CustomEvent(TUNING_STORAGE_EVENT, { detail: modelTuningStorageKey }),
+		)
 	}
 
 	const applyGridTuning = (next: CargoGridTuningState) => {
-		setGridTuning(next)
-		if (!isDev) return
+		setGridTuningState({
+			shipName: ship.name,
+			defaultsKey,
+			storageSnapshot: gridTuningSnapshot,
+			value: next,
+		})
+		if (!isDev || typeof window === 'undefined') return
 
 		try {
 			window.localStorage.setItem(gridTuningStorageKey, JSON.stringify(next))
 		} catch {
 			// Ignore localStorage failures in dev tuning mode.
 		}
+		window.dispatchEvent(
+			new CustomEvent(TUNING_STORAGE_EVENT, { detail: gridTuningStorageKey }),
+		)
 	}
 
 	const handleResetModelTuning = () => {
@@ -803,6 +842,15 @@ function CargoHold({
 				)}
 			</div>
 		</div>
+	)
+}
+
+function CargoHold(props: CargoHoldProps) {
+	return (
+		<CargoHoldContent
+			key={props.ship.name}
+			{...props}
+		/>
 	)
 }
 

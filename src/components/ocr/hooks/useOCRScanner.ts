@@ -1,4 +1,4 @@
-import { useState, useCallback, RefObject } from 'react'
+import { useState, useCallback, useRef, RefObject } from 'react'
 import { useImageProcessor } from './useImageProcessor'
 import { useOCRWorker } from './useOCRWorker'
 import { parseContractText } from '../parser/parseContract'
@@ -32,9 +32,12 @@ interface UseOCRScannerReturn {
 
 	// Worker status
 	isWorkerReady: boolean
+	initializationError: string | null
+	retryInitialization: () => void
 }
 
 export function useOCRScanner(): UseOCRScannerReturn {
+	const processingRef = useRef(false)
 	const [originalImage, setOriginalImage] = useState<string | null>(null)
 	const [ocrResult, setOcrResult] = useState<ColumnOCRResult | null>(null)
 	const [parsedData, setParsedData] = useState<ParsedContract | null>(null)
@@ -50,10 +53,13 @@ export function useOCRScanner(): UseOCRScannerReturn {
 		recognizeImage,
 		progress: workerProgress,
 		isReady: isWorkerReady,
+		initializationError,
+		retryInitialization,
 	} = useOCRWorker()
 
 	const processImage = useCallback(async () => {
-		if (!isWorkerReady || !originalImage) return
+		if (!isWorkerReady || !originalImage || processingRef.current) return
+		processingRef.current = true
 
 		setIsProcessing(true)
 		setError(null)
@@ -95,6 +101,7 @@ export function useOCRScanner(): UseOCRScannerReturn {
 					: 'An error occurred during processing'
 			)
 		} finally {
+			processingRef.current = false
 			setIsProcessing(false)
 			setOverallProgress(0)
 		}
@@ -139,5 +146,7 @@ export function useOCRScanner(): UseOCRScannerReturn {
 
 		// Worker status
 		isWorkerReady,
+		initializationError,
+		retryInitialization,
 	}
 }

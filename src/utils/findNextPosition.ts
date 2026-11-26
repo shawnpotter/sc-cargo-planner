@@ -100,7 +100,7 @@ const markOccupiedSpaces = (
 			for (let x = relX; x < relX + width; x++) {
 				if (z < grid.length && x < grid[0].length) {
 					grid[z][x].occupied = true
-					grid[z][x].height = containerTop
+					grid[z][x].height = Math.max(grid[z][x].height, containerTop)
 					grid[z][x].containerRef = container
 				}
 			}
@@ -204,6 +204,7 @@ const findPlacementInGrid = (
 	normalDimensions: ContainerDimensions,
 	rotatedDimensions: ContainerDimensions,
 	gridIndex: number,
+	canPlace: (placement: PlacementResult) => boolean,
 ): PlacementResult | null => {
 	// Search FILO (back to front), left to right, bottom to top
 	// At each position, try both orientations (Tetris-style packing)
@@ -215,7 +216,8 @@ const findPlacementInGrid = (
 				// BOTTOM to TOP
 				// Try normal orientation first
 				if (
-					tryPlacementAtPosition(grid, x, y, z, normalDimensions, cargoGrid)
+					tryPlacementAtPosition(grid, x, y, z, normalDimensions, cargoGrid) &&
+					canPlace({ position: { x, y, z }, rotated: false, gridIndex })
 				) {
 					return {
 						position: { x, y, z },
@@ -226,7 +228,8 @@ const findPlacementInGrid = (
 
 				// Try rotated orientation at same position
 				if (
-					tryPlacementAtPosition(grid, x, y, z, rotatedDimensions, cargoGrid)
+					tryPlacementAtPosition(grid, x, y, z, rotatedDimensions, cargoGrid) &&
+					canPlace({ position: { x, y, z }, rotated: true, gridIndex })
 				) {
 					return {
 						position: { x, y, z },
@@ -253,6 +256,7 @@ export const findNextPosition = (
 	size: number,
 	ship: Ship,
 	existingContainers: Container[],
+	canPlace: (placement: PlacementResult) => boolean = () => true,
 ): PlacementResult | null => {
 	// Check if the size exists in voxelDimensionsMap
 	if (!voxelDimensionsMap[size]) {
@@ -295,6 +299,7 @@ export const findNextPosition = (
 			normalDimensions,
 			rotatedDimensions,
 			gridIndex,
+			canPlace,
 		)
 		if (result) return result
 	}

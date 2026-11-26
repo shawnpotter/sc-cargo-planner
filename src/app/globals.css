@@ -637,3 +637,11 @@
 		0 2rem
 	);
 }
+
+/* Readable workspace palette and local system fonts. */
+:root { --background:#f4f6f8; --foreground:#172334; --card:#ffffff; --card-foreground:#172334; --popover:#ffffff; --popover-foreground:#172334; --primary:#087e8b; --primary-foreground:#ffffff; --muted:#edf1f5; --muted-foreground:#58687b; --accent:#e5f2f3; --accent-foreground:#172334; --border:#dce3e9; --input:#dce3e9; --ring:#087e8b; --font-geist-sans:ui-sans-serif,system-ui,sans-serif; --font-geist-mono:ui-monospace,monospace; }
+.dark { --background:#0b111c; --foreground:#e7edf5; --card:#111b2b; --card-foreground:#e7edf5; --popover:#172337; --popover-foreground:#e7edf5; --primary:#64d5de; --primary-foreground:#092028; --muted:#1b293d; --muted-foreground:#a2b0c4; --accent:#1b3344; --accent-foreground:#e7edf5; --border:#29384d; --input:#29384d; --ring:#64d5de; }
+body { font-family:var(--font-geist-sans); text-shadow:none; }
+body::before, body::after { display:none; }
+button, input, select { touch-action:manipulation; }
+@media (prefers-reduced-motion:reduce) { *, *::before, *::after { animation-duration:0.01ms !important; transition-duration:0.01ms !important; } }

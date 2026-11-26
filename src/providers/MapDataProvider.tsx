@@ -24,29 +24,68 @@ interface MapDataContextType {
 
 const MapDataContext = createContext<MapDataContextType | undefined>(undefined)
 
-const KNOWN_SYSTEMS = ['stanton', 'nyx', 'pyro']
+const isRecord = (value: unknown): value is Record<string, unknown> =>
+	typeof value === 'object' && value !== null && !Array.isArray(value)
+
+function isLocation(value: unknown): value is Location {
+	if (!isRecord(value)) return false
+	const coordinates = value.coordinates
+	const parent = value.parentObject
+	const system = value.system
+	if (!isRecord(coordinates)) return false
+	return typeof value.name === 'string' && typeof value.type === 'string' &&
+		['PLANET', 'MOON', 'SURFACE_LOCATION', 'ORBITAL_STATION', 'LAGRANGE_POINT_STATION', 'GATEWAY', 'STAR'].includes(value.type) &&
+		['x', 'y', 'z'].every((key) => typeof coordinates[key] === 'number' && Number.isFinite(coordinates[key])) &&
+		(parent === undefined || typeof parent === 'string') &&
+		(system === undefined || typeof system === 'string') &&
+		(value.requiresPlanetaryVisit === undefined || typeof value.requiresPlanetaryVisit === 'boolean') &&
+		(value.isSelectable === undefined || typeof value.isSelectable === 'boolean')
+}
+
+async function fetchMapData(path: string): Promise<Record<string, unknown>> {
+	const controller = new AbortController()
+	const timeout = setTimeout(() => controller.abort(), 10_000)
+	try {
+		const response = await fetch(path, { cache: 'no-store', signal: controller.signal })
+		const payload: unknown = await response.json()
+		if (!isRecord(payload)) throw new Error('Invalid map data response')
+		if (!response.ok) throw new Error(typeof payload.error === 'string' ? payload.error : 'Failed to load map data')
+		return payload
+	} catch (error) {
+		if (controller.signal.aborted) throw new Error('Loading map data timed out')
+		throw error
+	} finally {
+		clearTimeout(timeout)
+	}
+}
+
+async function fetchAvailableSystems(): Promise<string[]> {
+	const payload = await fetchMapData('/api/map/systems')
+	if (!Array.isArray(payload.data)) throw new Error('Invalid map systems response')
+	const systems: string[] = []
+	for (const entry of payload.data) {
+		if (!isRecord(entry) || typeof entry.id !== 'string' || !/^[a-z0-9_-]{1,40}$/i.test(entry.id)) {
+			throw new Error('Invalid map system identifier')
+		}
+		systems.push(entry.id.toLowerCase())
+	}
+	if (!systems.length) throw new Error('No map systems are available')
+	return [...new Set(systems)]
+}
 
 async function fetchSystemLocations(
 	system: string,
-): Promise<{ locations: Location[]; system: string; cached: boolean }> {
-	const response = await fetch(
-		`/api/map/locations?system=${encodeURIComponent(system)}`,
-		{
-			cache: 'no-store',
-		},
-	)
-	const payload = (await response.json()) as {
-		data?: Location[]
-		meta?: { system?: string; cached?: boolean }
-		error?: string
-	}
-	if (!response.ok) {
-		throw new Error(payload.error || `Failed to load ${system} locations`)
-	}
+): Promise<{ locations: Location[]; system: string; cached: boolean; contextIncomplete: boolean }> {
+	const body = await fetchMapData(`/api/map/locations?system=${encodeURIComponent(system)}`)
+	const meta = isRecord(body.meta) ? body.meta : undefined
+	const data = body.data
+	if (!Array.isArray(data) || !data.every(isLocation)) throw new Error(`Invalid ${system} locations data`)
+	const locations: Location[] = data.map((location) => ({ ...location, system: location.system ?? system }))
 	return {
-		locations: payload.data ?? [],
-		system: payload.meta?.system ?? system,
-		cached: payload.meta?.cached ?? false,
+		locations,
+		system: typeof meta?.system === 'string' ? meta.system : system,
+		cached: meta?.cached === true,
+		contextIncomplete: meta?.contextIncomplete === true || (Array.isArray(meta?.contextWarnings) && meta.contextWarnings.length > 0),
 	}
 }
 
@@ -54,18 +93,25 @@ async function loadLocations(): Promise<{
 	locations: Location[]
 	system: string
 	cached: boolean
+	degraded: boolean
+	failedSystems: string[]
+	contextUnavailableSystems: string[]
 }> {
+	const systems = await fetchAvailableSystems()
 	const results = await Promise.allSettled(
-		KNOWN_SYSTEMS.map((s) => fetchSystemLocations(s)),
+		systems.map((s) => fetchSystemLocations(s)),
 	)
 
 	const allLocations: Location[] = []
 	let anyCached = false
-	for (const result of results) {
+	const failedSystems: string[] = []
+	const contextUnavailableSystems: string[] = []
+	for (const [index, result] of results.entries()) {
 		if (result.status === 'fulfilled') {
 			allLocations.push(...result.value.locations)
 			if (result.value.cached) anyCached = true
-		}
+			if (result.value.contextIncomplete) contextUnavailableSystems.push(systems[index])
+		} else failedSystems.push(systems[index])
 	}
 
 	if (allLocations.length === 0) {
@@ -74,8 +120,11 @@ async function loadLocations(): Promise<{
 
 	return {
 		locations: allLocations,
-		system: 'stanton',
-		cached: anyCached,
+		system: allLocations[0].system ?? systems[0],
+		cached: anyCached || failedSystems.length > 0,
+		degraded: failedSystems.length > 0,
+		failedSystems,
+		contextUnavailableSystems,
 	}
 }
 
@@ -98,8 +147,16 @@ export function MapDataProvider({
 			setLocations(result.locations)
 			setSystem(result.system)
 			setCached(result.cached)
+			const messages: string[] = []
+			if (result.degraded) messages.unshift(`Some map systems are unavailable (${result.failedSystems.join(', ')}); showing available or cached locations.`)
+			if (result.contextUnavailableSystems.length) {
+				const names = result.contextUnavailableSystems.map((name) => name.charAt(0).toUpperCase() + name.slice(1))
+				messages.push(`Local map detail is unavailable for parts of ${new Intl.ListFormat('en', { type: 'conjunction' }).format(names)}. Route coordinates are available.`)
+			}
+			setError(messages.length ? messages.join(' ') : null)
 			setRuntimeLocations(result.locations)
 		} catch (refreshError) {
+			setCached(true)
 			setError(
 				refreshError instanceof Error
 					? refreshError.message
@@ -112,8 +169,10 @@ export function MapDataProvider({
 	}, [])
 
 	useEffect(() => {
-		refresh().catch((refreshError) => {
-			console.error('Failed to initialize map locations:', refreshError)
+		queueMicrotask(() => {
+			refresh().catch((refreshError) => {
+				console.error('Failed to initialize map locations:', refreshError)
+			})
 		})
 	}, [refresh])
 

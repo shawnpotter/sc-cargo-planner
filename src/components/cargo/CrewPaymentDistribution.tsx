@@ -1,244 +1,26 @@
-// @/app/components/CrewPaymentDistribution.tsx
-import { useState, useEffect } from 'react'
-import { Contract } from '@/constants/types'
-import { Button } from '@/components/ui/button'
-import { Input } from '@/components/ui/input'
-import { HaulingMode } from '@/utils/calculateContainers'
-
-interface CrewMember {
-	id: string
-	name: string
-	share: number
+import { useState } from 'react';
+import { Contract } from '@/constants/types';
+import { useCargo } from '@/providers/CargoProvider';
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { HaulingMode } from '@/utils/calculateContainers';
+export function CrewPaymentDistribution({ contracts, haulingMode }: Readonly<{
+    contracts: Contract[];
+    haulingMode: HaulingMode;
+}>) {
+    const { crewMembers, setCrewMembers, manualPayout, setManualPayout } = useCargo();
+    const [name, setName] = useState('');
+    const [share, setShare] = useState(0);
+    const totalPayout = haulingMode === HaulingMode.CONTRACT ? contracts.reduce((sum, item) => sum + (item.payout ?? 0), 0) : manualPayout;
+    const totalShares = crewMembers.reduce((sum, item) => sum + item.share, 0);
+    const amount = (weight: number) => totalShares > 0 ? totalPayout * weight / totalShares : 0;
+    const nonnegative = (value: string) => { const number = Number(value); return Number.isFinite(number) ? Math.max(0, number) : 0; };
+    return <section className='space-y-6'>
+		<div><h2 className='text-xl font-semibold'>Crew payments</h2><p className='mt-1 text-sm text-muted-foreground'>Distribute the payout proportionally by share. Crew settings are saved with this run.</p></div>
+		<div className='rounded-xl border bg-muted/30 p-4'>{haulingMode === HaulingMode.CONTRACT ? <><p className='text-sm text-muted-foreground'>Total contract payout</p><p className='mt-1 text-2xl font-semibold'>{totalPayout.toLocaleString()} aUEC</p></> : <label className='grid gap-2 text-sm font-medium'>Commodity payout (aUEC)<Input type='number' min={0} value={manualPayout || ''} onChange={(event) => setManualPayout(nonnegative(event.target.value))} placeholder='Total payout'/></label>}</div>
+		<div className='space-y-3'>{crewMembers.map((member) => <div key={member.id} className='grid items-end gap-3 rounded-xl border p-4 sm:grid-cols-[minmax(0,1fr)_100px_minmax(100px,1fr)_auto]'><label className='grid gap-2 text-xs text-muted-foreground'>Crew member<Input aria-label={`Name for ${member.name}`} value={member.name} onChange={(event) => setCrewMembers(crewMembers.map((item) => item.id === member.id ? { ...item, name: event.target.value } : item))}/></label><label className='grid gap-2 text-xs text-muted-foreground'>Share weight<Input aria-label={`Share for ${member.name}`} type='number' min={0} value={member.share} onChange={(event) => setCrewMembers(crewMembers.map((item) => item.id === member.id ? { ...item, share: nonnegative(event.target.value) } : item))}/></label><p className='pb-2 text-sm font-medium'>{amount(member.share).toLocaleString(undefined, { maximumFractionDigits: 2 })} aUEC</p><Button variant='outline' onClick={() => setCrewMembers(crewMembers.filter((item) => item.id !== member.id))} aria-label={`Remove ${member.name}`}>Remove</Button></div>)}</div>
+		{totalShares === 0 && <p role='status' className='text-sm text-muted-foreground'>Add a positive share to calculate payments.</p>}
+		<form className='grid items-end gap-3 rounded-xl bg-muted/30 p-4 sm:grid-cols-[minmax(0,1fr)_120px_auto]' onSubmit={(event) => { event.preventDefault(); if (!name.trim() || share <= 0)
+        return; setCrewMembers([...crewMembers, { id: crypto.randomUUID(), name: name.trim(), share }]); setName(''); setShare(0); }}><label className='grid gap-2 text-sm'>Crew member name<Input value={name} onChange={(event) => setName(event.target.value)} placeholder='Crew member name' required/></label><label className='grid gap-2 text-sm'>Share weight<Input type='number' min={0.01} step='any' value={share || ''} onChange={(event) => setShare(nonnegative(event.target.value))} required/></label><Button type='submit'>Add crew member</Button></form>
+	</section>;
 }
-
-interface CrewPaymentDistributionProps {
-	readonly contracts: Contract[]
-	readonly haulingMode: HaulingMode
-}
-
-/**
- * Displays and manages the distribution of payment among crew members based on contract or manual payout.
- *
- * - Allows users to view, add, remove, and update crew members and their share percentages.
- * - Calculates each crew member's payment based on their share and the total payout.
- * - Supports two hauling modes: contract-based (aggregates payouts from contracts) and manual entry.
- * - Warns if total share percentage does not equal 100%.
- *
- * @param contracts - Array of contract objects, each containing payout information.
- * @param haulingMode - The current hauling mode, either contract-based or manual.
- *
- * @returns React component for crew payment distribution management.
- */
-function CrewPaymentDistribution({
-	contracts,
-	haulingMode,
-}: CrewPaymentDistributionProps) {
-	const [crewMembers, setCrewMembers] = useState<CrewMember[]>([
-		{ id: '1', name: 'Captain', share: 40 },
-		{ id: '2', name: 'Co-Pilot', share: 30 },
-		{ id: '3', name: 'Engineer', share: 30 },
-	])
-
-	const [newMember, setNewMember] = useState<{ name: string; share: number }>({
-		name: '',
-		share: 0,
-	})
-
-	const [totalPayout, setTotalPayout] = useState<number>(0)
-	const [manualPayout, setManualPayout] = useState<number>(0)
-
-	useEffect(() => {
-		if (haulingMode === HaulingMode.CONTRACT) {
-			// Calculate total payout from all contracts
-			const total = contracts.reduce(
-				(sum, contract) => sum + (contract.payout ?? 0),
-				0
-			)
-			setTotalPayout(total)
-		}
-	}, [contracts, haulingMode])
-
-	// Get the effective payout based on hauling mode
-	const effectivePayout =
-		haulingMode === HaulingMode.CONTRACT ? totalPayout : manualPayout
-
-	const addCrewMember = (e: React.MouseEvent) => {
-		e.preventDefault()
-		if (newMember.name && newMember.share > 0) {
-			setCrewMembers([
-				...crewMembers,
-				{
-					id: Date.now().toString(),
-					name: newMember.name,
-					share: newMember.share,
-				},
-			])
-			setNewMember({ name: '', share: 0 })
-		}
-	}
-
-	const removeCrewMember = (id: string) => {
-		setCrewMembers(crewMembers.filter((member) => member.id !== id))
-	}
-
-	const updateCrewMemberShare = (id: string, share: number) => {
-		setCrewMembers(
-			crewMembers.map((member) =>
-				member.id === id ? { ...member, share } : member
-			)
-		)
-	}
-
-	const totalShares = crewMembers.reduce((sum, member) => sum + member.share, 0)
-
-	const getPaymentForMember = (share: number) => {
-		if (totalShares === 0) return 0
-		return (share / totalShares) * effectivePayout
-	}
-
-	return (
-		<div>
-			<div>
-				<h1>Crew Payment Distribution</h1>
-			</div>
-
-			<div>
-				{/* Total payout information */}
-				<div>
-					{haulingMode === HaulingMode.CONTRACT ? (
-						<div>
-							<span>Total Contract Payout:</span>
-							<span>{totalPayout.toLocaleString()} aUEC</span>
-						</div>
-					) : (
-						<div>
-							<span>Enter Commodity Payout:</span>
-							<div className='flex items-center gap-2'>
-								<Input
-									type='number'
-									value={manualPayout || ''}
-									onChange={(e) =>
-										setManualPayout(parseInt(e.target.value) || 0)
-									}
-									min='0'
-									placeholder='Total Payout'
-								/>
-								<span className='text-xs text-gray-400'>aUEC</span>
-							</div>
-						</div>
-					)}
-
-					<div>
-						<span>Total Share Percentage:</span>
-						<span>{totalShares}%</span>
-					</div>
-					{totalShares !== 100 && (
-						<div>Note: Total shares do not equal 100%</div>
-					)}
-				</div>
-
-				{/* Crew member list */}
-				<div>
-					<div>
-						<span></span>
-						<h3>Crew Members</h3>
-						<span></span>
-					</div>
-
-					<div>
-						<div>Name</div>
-						<div>Share %</div>
-						<div>Payment</div>
-						<div>Action</div>
-					</div>
-
-					{crewMembers.map((member) => (
-						<div key={member.id}>
-							<div>{member.name}</div>
-							<div>
-								<div className='flex items-center gap-2'>
-									<Input
-										type='number'
-										value={member.share}
-										onChange={(e) =>
-											updateCrewMemberShare(
-												member.id,
-												parseInt(e.target.value) || 0
-											)
-										}
-										min='0'
-									/>
-									<span className='text-xs text-gray-400'>%</span>
-								</div>
-							</div>
-							<div>
-								{getPaymentForMember(member.share).toLocaleString()} aUEC
-							</div>
-							<div>
-								<Button
-									onClick={() => removeCrewMember(member.id)}
-									variant='destructive'
-								>
-									Remove
-								</Button>
-							</div>
-						</div>
-					))}
-				</div>
-
-				{/* Add new crew member */}
-				<div>
-					<div>
-						<span></span>
-						<h3>Add New Crew Member</h3>
-						<span></span>
-					</div>
-
-					<div>
-						<div>
-							<div>
-								<label htmlFor='crew-member-name'>Crew Member Name</label>
-								<Input
-									id='crew-member-name'
-									type='text'
-									value={newMember.name}
-									onChange={(e) =>
-										setNewMember({ ...newMember, name: e.target.value })
-									}
-									placeholder='Crew Member Name'
-								/>
-							</div>
-						</div>
-						<div>
-							<div className='flex items-center gap-2'>
-								<Input
-									type='number'
-									value={newMember.share || ''}
-									onChange={(e) =>
-										setNewMember({
-											...newMember,
-											share: parseInt(e.target.value) || 0,
-										})
-									}
-									min='0'
-									placeholder='Share'
-								/>
-								<span className='text-xs text-gray-400'>%</span>
-							</div>
-						</div>
-						<div>
-							<Button
-								onClick={addCrewMember}
-								variant='default'
-							>
-								Add Crew Member
-							</Button>
-						</div>
-					</div>
-				</div>
-			</div>
-		</div>
-	)
-}
-
-export { CrewPaymentDistribution }

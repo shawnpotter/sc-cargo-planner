@@ -1,12 +1,13 @@
 import { NextResponse } from 'next/server'
 import { fetchSystems } from '@/lib/map/serverClient'
+import { readDatasetMetadata } from '@/lib/map/metadata'
 
 export async function GET() {
   try {
-    const systems = await fetchSystems()
+    const { data: systems, meta } = await fetchSystems()
     return NextResponse.json({
       data: systems,
-      meta: { count: systems.length },
+      meta: { ...readDatasetMetadata(meta), count: systems.length },
     })
   } catch (error) {
     return NextResponse.json(

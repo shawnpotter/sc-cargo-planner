@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { fetchSystemLocations } from '@/lib/map/serverClient'
 import { normalizeMapLocations } from '@/lib/map/normalize'
+import { readDatasetMetadata } from '@/lib/map/metadata'
 import type { NormalizedMapResponse } from '@/lib/map/types'
 import { locations as staticFallbackLocations, type Location } from '@/data/locations'
 
@@ -30,12 +31,20 @@ function getSystemFromRequest(request: NextRequest): string {
 }
 
 export async function GET(request: NextRequest) {
-  const system = getSystemFromRequest(request)
+  const requestedSystem = getSystemFromRequest(request).trim().toLowerCase()
+  if (!/^[a-z0-9_-]{1,40}$/.test(requestedSystem)) {
+    return NextResponse.json({ error: 'Invalid system identifier' }, { status: 400 })
+  }
+  const system = requestedSystem
   try {
-    const apiLocations = await fetchSystemLocations(system)
-    const normalizedLocations = normalizeMapLocations(apiLocations, system)
+    const { data: apiLocations, meta, bodyLocations, contextWarnings: upstreamWarnings } = await fetchSystemLocations(system)
+    if (apiLocations.length === 0) throw new Error('Map API returned no locations')
+    const { locations: normalizedLocations, contextWarnings: normalizationWarnings } = normalizeMapLocations(apiLocations, system, bodyLocations)
+    const contextWarnings = [...upstreamWarnings, ...normalizationWarnings]
 
     const freshResponse: NormalizedMapResponse = {
+      ...readDatasetMetadata(meta),
+      contextWarnings,
       locations: normalizedLocations,
       system,
       count: normalizedLocations.length,
@@ -48,6 +57,9 @@ export async function GET(request: NextRequest) {
     return NextResponse.json({
       data: normalizedLocations,
       meta: {
+        ...readDatasetMetadata(meta),
+        contextIncomplete: contextWarnings.length > 0,
+        contextWarnings,
         count: normalizedLocations.length,
         system,
         cached: false,
@@ -60,6 +72,9 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({
         data: cachedResponse.locations,
         meta: {
+          ...readDatasetMetadata({ ...cachedResponse }),
+          contextIncomplete: cachedResponse.contextWarnings.length > 0,
+          contextWarnings: cachedResponse.contextWarnings,
           count: cachedResponse.count,
           system,
           cached: true,

@@ -1,4 +1,8 @@
-import { useCallback } from 'react'
+import { useCallback, useRef } from 'react'
+import Image from 'next/image'
+import { Button } from '@/components/ui/button'
+import { DEFAULT_SETTINGS, ParsedContract } from '../parser/types'
+import { useMapData } from '@/providers/MapDataProvider'
 import { useOCRScanner } from '../hooks/useOCRScanner'
 import { UploadImage } from './UploadImage'
 import { Preview } from './Preview'
@@ -13,6 +17,8 @@ interface ScannerContentProps {
 
 export function ScannerContent({ onClose }: ScannerContentProps) {
 	const { addOCRContracts } = useContracts()
+	const applied = useRef(false)
+	const { locations } = useMapData()
 	const {
 		originalImage,
 		ocrResult,
@@ -25,26 +31,28 @@ export function ScannerContent({ onClose }: ScannerContentProps) {
 		setSettings,
 		processImage,
 		reset,
-		setError,
 		leftCanvasRef,
 		rightCanvasRef,
 		isWorkerReady,
+		initializationError,
+		retryInitialization,
 	} = useOCRScanner()
 
-	const handleApplyToForm = useCallback(() => {
+	const handleApplyToForm = useCallback((reviewed: ParsedContract) => {
+		if (applied.current) return
 		const { contracts, error: transformError } =
-			transformParsedContract(parsedData)
+			transformParsedContract(reviewed, locations.filter(location => location.isSelectable !== false).map(location => location.name))
 
 		if (transformError) {
-			setError(transformError)
-			return
+			throw new Error(transformError)
 		}
 
 		if (contracts.length > 0) {
-			addOCRContracts(contracts)
+			applied.current = true
+			try { addOCRContracts(contracts) } catch (error) { applied.current = false; throw error }
 			onClose()
 		}
-	}, [parsedData, addOCRContracts, onClose, setError])
+	}, [locations, addOCRContracts, onClose])
 
 	// Show upload interface when no image is selected
 	if (!originalImage) {
@@ -64,21 +72,34 @@ export function ScannerContent({ onClose }: ScannerContentProps) {
 			<>
 				<div className='grid grid-cols-1 md:grid-cols-2 gap-4'>
 					<div className='bg-card p-3 rounded border border-border'>
+						<Image src={originalImage} alt='Selected contract screenshot' width={1000} height={700} unoptimized className='w-full max-h-72 object-contain rounded-lg' />
+						<details><summary className='cursor-pointer min-h-10'>Advanced column preview</summary>
 						<Preview
 							leftCanvasRef={leftCanvasRef}
 							rightCanvasRef={rightCanvasRef}
 							splitColumn={settings.splitColumn}
 						/>
+						</details>
 					</div>
 					<div className='bg-card p-3 rounded border border-border flex flex-col gap-3'>
+						{initializationError ? (
+							<>
+								<p role='alert' className='text-sm text-destructive'>{initializationError}</p>
+								<Button type='button' onClick={retryInitialization}>Retry scanner</Button>
+							</>
+						) : (
+							<Button type='button' disabled={isProcessing || !isWorkerReady} onClick={processImage}>{isProcessing ? 'Scanning...' : isWorkerReady ? 'Scan screenshot' : 'Preparing scanner...'}</Button>
+						)}
+						<details><summary className='cursor-pointer min-h-10'>Advanced image adjustments</summary>
 						<Controls
 							settings={settings}
 							onSettingsChange={setSettings}
-							onReset={() => setSettings({ ...settings })}
+							onReset={() => setSettings(DEFAULT_SETTINGS)}
 							onRunOCR={processImage}
 							isProcessing={isProcessing}
 							hasWorker={isWorkerReady}
 						/>
+						</details>
 					</div>
 				</div>
 

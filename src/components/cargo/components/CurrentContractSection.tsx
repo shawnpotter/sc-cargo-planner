@@ -1,17 +1,19 @@
 import React from 'react'
-import { Contract } from '@/constants/types'
+import { Contract, DeliveryPoint } from '@/constants/types'
 import { ContractCard } from '@/components/cargo/components/ContractCard'
 
 interface CurrentContractSectionProps {
 	currentContract: Partial<Contract>
 	onRemoveDeliveryPoint: (index: number) => void
 	onSaveContract: () => void
+	onChangeDeliveryPoints?: (points: DeliveryPoint[]) => void
 }
 
 export function CurrentContractSection({
 	currentContract,
 	onRemoveDeliveryPoint,
 	onSaveContract,
+	onChangeDeliveryPoints,
 }: Readonly<CurrentContractSectionProps>) {
 	if (
 		!currentContract.deliveryPoints ||
@@ -28,6 +30,7 @@ export function CurrentContractSection({
 				contract={currentContract}
 				onRemoveDeliveryPoint={onRemoveDeliveryPoint}
 				onSave={onSaveContract}
+				onChangeDeliveryPoints={onChangeDeliveryPoints}
 				variant='current'
 			/>
 		</div>

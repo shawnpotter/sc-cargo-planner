@@ -1,47 +1,47 @@
 # SC Cargo Planner
 
-A Universal Cargo Management System for Star Citizen, built with Next.js, TypeScript, Prisma, and NextAuth.
-
-## Overview
-
-This project is the source code for the deployed SC Cargo Planner website.  
-It is provided for transparency, learning, and community contributions.
-
-**Note:**  
-This repository is not intended for users to deploy their own versions.  
-If you want to use the SC Cargo Planner, please visit the official website.
+A Star Citizen cargo planner for contract and commodity hauling. Plan your cargo load, follow your route, and split the payout with your crew.
 
 ## Features
 
-- Visual cargo hold planning and ship selection
-- Cargo manifest and contract management
-- Crew payment distribution
-- Authentication (sign in, sign up, guest access)
-- User settings and account management
-- Modern, terminal-inspired UI
+- Select a ship and enter cargo contracts or commodity loads.
+- Scan contract screenshots and review the extracted details before adding them to a run.
+- Plan pickups and deliveries around the ship's cargo capacity and available space.
+- Track each stop with a route checklist and map. Inspect container placement in the 3D cargo hold.
+- Resume a saved run in the same browser and calculate payouts by crew share.
 
-## Map API Integration
+## Run locally
 
-The planner now supports loading location data from an external SC Map API through internal proxy routes.
+Use Node.js 24.20.0 and npm 11.19.0.
 
-Set these environment variables in your local environment:
+```sh
+npm ci
+npm run dev
+```
 
-- `SCMAP_BASE_URL` - Base URL to the external map API (`http://localhost:3000/api` in development)
-- `SCMAP_API_KEY` - API key sent as `X-API-Key` for upstream requests
-- `SCMAP_DEFAULT_SYSTEM` - Optional default system id (defaults to `stanton`)
-- `SCMAP_EXCLUDED_KINDS` - Optional comma-separated kinds excluded from selectable locations
+Open [localhost:3000/cargo](http://localhost:3000/cargo). On Windows PowerShell, use `npm.cmd` if script execution policy blocks `npm.ps1`.
 
-When the upstream map API is unavailable, the app serves the most recent successful map snapshot from in-memory cache on the server.
+## Configure SCMap
 
-## Contributing
+To use live location data, configure SCMap in `.env.local`.
 
-Contributions are welcome for bug fixes, improvements, and new features.  
-Please open an issue or pull request with your suggestions.
+| Variable | Value |
+| --- | --- |
+| `SCMAP_BASE_URL` | SCMap API URL, such as `http://localhost:3005/api` |
+| `SCMAP_API_KEY` | Server-side API key |
+| `SCMAP_DEFAULT_SYSTEM` | Optional. Defaults to `stanton`. |
+| `SCMAP_EXCLUDED_KINDS` | Optional comma-separated list of location types to exclude. |
 
-## License
+Keep the API key in server-side configuration and restart the app after changing these settings.
 
-This project is provided for educational and community purposes.  
-Star Citizen and all related trademarks are property of Cloud Imperium Games.  
-This project is a fan tool and not affiliated with CIG.
+The planner can use cached or bundled location data when SCMap is unavailable. Available routes depend on the location and gateway data for each system.
 
----
+## Contribute
+
+Run `npm run verify` to check types, lint, tests, and the production build. Run `npm run test:ocr` to test the screenshot fixtures.
+
+Open an issue or pull request for a bug fix or proposed improvement. Include the affected workflow and verification results.
+
+## Project notice
+
+This project is provided for educational and community purposes. Star Citizen and related trademarks belong to Cloud Imperium Games. This fan tool is not affiliated with CIG.

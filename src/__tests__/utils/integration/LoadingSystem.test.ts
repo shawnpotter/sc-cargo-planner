@@ -374,39 +374,23 @@ describe('Loading System Integration', () => {
 			expect(totalSCU).toBe(24) // 8+4+6+6
 		})
 
-		it('gracefully handles partial loading when ship is too small', () => {
-			const ship = makeShip({ width: 2, length: 2, height: 2 }) // 8 SCU capacity
-			const contracts = [
-				makeContract(
-					'Port Tressler',
-					[{ location: 'New Babbage Interstellar Spaceport', quantity: 20 }],
-					4,
-				),
-			]
-
-			const consoleSpy = vi.spyOn(console, 'warn').mockImplementation(() => {})
-
-			handleLoadCargo({
-				contracts,
-				selectedShip: ship,
-				setContainers,
+		it('preserves the prior plan and reports failure when the ship is too small', () => {
+			const ship = makeShip({ width: 2, length: 2, height: 2 })
+			handleLoadCargo({ contracts: [makeContract('Port Tressler', [{ location: 'New Babbage Interstellar Spaceport', quantity: 4 }], 4)], selectedShip: ship, setContainers })
+			const previous = containers
+			const callback = vi.fn(setContainers)
+			const setOptimizedRoute = vi.fn()
+			const result = handleLoadCargo({
+				contracts: [makeContract('Port Tressler', [{ location: 'New Babbage Interstellar Spaceport', quantity: 20 }], 4)],
+				selectedShip: ship, setContainers: callback, setOptimizedRoute,
 			})
-
-			// Should load what it can
-			expect(containers.length).toBeGreaterThan(0)
-
-			// Total loaded should not exceed ship capacity
-			const totalLoaded = containers.reduce((sum, c) => sum + c.size, 0)
-			expect(totalLoaded).toBeLessThanOrEqual(8)
-
-			// Should have warned about inability to fit everything
-			expect(consoleSpy).toHaveBeenCalledWith(
-				expect.stringContaining('Unable to fit remaining'),
-			)
-
-			consoleSpy.mockRestore()
+			expect(result.success).toBe(false)
+			if (!result.success) expect(result.error).toMatch(/20 SCU.*8 SCU capacity/)
+			expect(containers).toBe(previous)
+			expect(containers.reduce((sum, box) => sum + box.size, 0)).toBe(4)
+			expect(callback).not.toHaveBeenCalled()
+			expect(setOptimizedRoute).not.toHaveBeenCalled()
 		})
-
 		it('maintains valid placement through entire loading process', () => {
 			const ship = makeShip({ width: 3, length: 3, height: 3 })
 			const contracts = [

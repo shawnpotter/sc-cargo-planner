@@ -1,18 +1,3 @@
-'use client'
-// app/page.tsx
-import { WelcomeScreen } from '@/components/home/WelcomeScreen'
-import { useRouter } from 'next/navigation'
-
-export default function Home() {
-	const router = useRouter()
-
-	const handleContinue = () => {
-		router.push('/cargo')
-	}
-
-	return (
-		<main>
-			<WelcomeScreen onContinue={handleContinue} />
-		</main>
-	)
-}
+import Link from 'next/link';
+import { ArrowRight, Boxes, ClipboardList, Route } from 'lucide-react';
+export default function Home() { return <main className='mx-auto flex min-h-[calc(100dvh-var(--header-h))] max-w-5xl flex-col justify-center px-6 py-16'><p className='text-xs font-semibold uppercase tracking-[0.25em] text-primary'>Universal cargo management</p><h1 className='mt-5 max-w-3xl text-4xl font-semibold leading-tight tracking-tight sm:text-6xl'>Less juggling.<br />More hauling.</h1><p className='mt-6 max-w-xl text-lg leading-relaxed text-muted-foreground'>Bring your ship, contracts, and cargo together. Plan a fitting load, follow your route, and pick up where you left off.</p><Link href='/cargo' className='mt-8 inline-flex min-h-12 w-fit items-center gap-3 rounded-lg bg-primary px-6 font-medium text-primary-foreground'>Open your run <ArrowRight className='size-4'/></Link><p className='mt-3 text-xs text-muted-foreground'>No account needed. Your active run is saved in this browser.</p><div className='mt-16 grid gap-4 sm:grid-cols-3'>{[{ icon: ClipboardList, title: 'Capture your contracts', text: 'Enter cargo manually or review a scanned screenshot.' }, { icon: Boxes, title: 'Plan your cargo', text: 'Inspect the load in 3D and keep each delivery organized.' }, { icon: Route, title: 'Follow the next stop', text: 'Track pickups and deliveries without losing your place.' }].map(({ icon: Icon, title, text }) => <div key={title} className='rounded-xl border bg-card p-5'><Icon className='size-5 text-primary'/><h2 className='mt-4 font-semibold'>{title}</h2><p className='mt-2 text-sm leading-relaxed text-muted-foreground'>{text}</p></div>)}</div></main>; }
