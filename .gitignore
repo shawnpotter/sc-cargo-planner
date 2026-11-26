@@ -47,4 +47,7 @@ next-env.d.ts
 *.traineddata
 
 *.ctm
+
+# Local project notes
+/project-notes/
 BETA_FINISHING_SPEC.md
