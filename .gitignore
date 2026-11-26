@@ -45,9 +45,9 @@ next-env.d.ts
 
 # tesseract.js training data
 *.traineddata
-
 *.ctm
+
+.agent
 
 # Local project notes
 /project-notes/
-BETA_FINISHING_SPEC.md
